@@ -1,0 +1,147 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Añadir signos · {{ perfil.user.get_full_name|default:perfil.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 960px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+      Añadir signos · {{ perfil.user.first_name }} {{ perfil.user.last_name }}
+      <small class="text-muted d-block fs-6">@{{ perfil.user.username }}</small>
+    </h4>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'perfil_paciente' perfil.id %}">Ver ficha</a>
+      <a class="btn btn-outline-primary" href="{% url 'historia_paciente' perfil.id %}">Ver historia</a>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mb-2">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="card shadow-sm" novalidate>
+    {% csrf_token %}
+
+    <div class="card-header">
+      <strong>Nuevo registro</strong>
+    </div>
+
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Fecha y hora</label>
+          <input type="text" name="fecha_registro" class="form-control"
+                 value="{{ prefill.fecha_registro|default:'' }}" placeholder="YYYY-MM-DD HH:MM">
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <h5 class="mb-2">1) Signos vitales</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">PAS (mmHg)</label>
+          <input type="number" name="pa_sistolica" class="form-control"
+                 value="{{ prefill.pa_sistolica|default:'' }}" placeholder="p. ej. 120">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">PAD (mmHg)</label>
+          <input type="number" name="pa_diastolica" class="form-control"
+                 value="{{ prefill.pa_diastolica|default:'' }}" placeholder="p. ej. 80">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">PAM (mmHg)</label>
+          <input type="number" step="0.01" name="pa_media" class="form-control"
+                 value="{{ prefill.pa_media|default:'' }}" placeholder="Se calcula si se deja vacío">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Temperatura (°C)</label>
+          <input type="number" step="0.1" name="temperatura" class="form-control"
+                 value="{{ prefill.temperatura|default:'' }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">FR (rpm)</label>
+          <input type="number" name="frecuencia_respiratoria" class="form-control"
+                 value="{{ prefill.frecuencia_respiratoria|default:'' }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">FC (lpm)</label>
+          <input type="number" name="frecuencia_cardiaca" class="form-control"
+                 value="{{ prefill.frecuencia_cardiaca|default:'' }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">SpO₂ (%)</label>
+          <input type="number" name="saturacion_oxigeno" class="form-control"
+                 value="{{ prefill.saturacion_oxigeno|default:'' }}" required>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <h5 class="mb-2">2) Datos antropométricos</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Peso (kg)</label>
+          <input id="peso" type="number" step="0.01" name="peso" class="form-control"
+                 value="{{ prefill.peso|default:'' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Talla/Estatura (m)</label>
+          <input id="talla" type="number" step="0.01" name="talla" class="form-control"
+                 value="{{ prefill.talla|default:'' }}" required placeholder="p. ej. 1.70">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">IMC</label>
+          <input id="imc" type="number" step="0.01" name="imc" class="form-control"
+                 value="{{ prefill.imc|default:'' }}" placeholder="Se calcula si se deja vacío">
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <h5 class="mb-2">3) Mediciones capilares</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Glucosa capilar (mg/dL)</label>
+          <input type="number" step="0.1" name="glucosa_capilar" class="form-control"
+                 value="{{ prefill.glucosa_capilar|default:'' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Hemoglobina (g/dL)</label>
+          <input type="number" step="0.1" name="hemoglobina" class="form-control"
+                 value="{{ prefill.hemoglobina|default:'' }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Guardar signos</button>
+      <a class="btn btn-outline-secondary" href="{% url 'historia_paciente' perfil.id %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Calcula IMC en cliente si el campo está vacío
+  (function(){
+    const peso  = document.getElementById('peso');
+    const talla = document.getElementById('talla');
+    const imc   = document.getElementById('imc');
+    function calc(){
+      const p = parseFloat(peso.value);
+      const t = parseFloat(talla.value);
+      if (p > 0 && t > 0 && !imc.value){
+        imc.value = (p/(t*t)).toFixed(2);
+      }
+    }
+    peso?.addEventListener('input', calc);
+    talla?.addEventListener('input', calc);
+  })();
+</script>
+{% endblock %}

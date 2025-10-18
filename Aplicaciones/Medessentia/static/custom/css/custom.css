@@ -1,0 +1,28 @@
+/* Medessentia brand */
+:root{
+  --brand-primary: #6f3cc3;  /* lila */
+  --brand-secondary: #2bb6f0;/* celeste */
+  --brand-dark: #2a2a2e;
+}
+
+/* Botones y badges (Bootstrap 5) */
+.btn-primary{ background-color: var(--brand-primary); border-color: var(--brand-primary); }
+.btn-primary:hover{ filter: brightness(0.92); }
+
+.badge.text-bg-secondary{ background-color: var(--brand-secondary)!important; }
+
+/* Sidebar (MaterialPro) */
+.aside, .sidebar, .left-sidebar{ background: linear-gradient(180deg, var(--brand-primary), #4e2a96); }
+.nav-link.active, .menu-item.active > a{
+  color: #fff !important; background: rgba(255,255,255,.12);
+}
+
+/* KPIs */
+.card .text-muted.small{ color:#667085!important; }
+.card .h4{ color: var(--brand-dark); }
+
+/* Logo tamaño */
+.navbar-brand img{ height: 34px; }
+.badge-role-Administrador{ background:#6f3cc3; }
+.badge-role-Doctor{ background:#2bb6f0; color:#0b2b3a; }
+.badge-role-Paciente{ background:#6c757d; }

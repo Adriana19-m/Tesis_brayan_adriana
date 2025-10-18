@@ -1,0 +1,41 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% block title %}Perfil · {{ perfil.user.get_full_name|default:perfil.user.username }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 900px;">
+  <div class="card shadow-sm">
+    <div class="card-header"><h5 class="mb-0">Perfil del paciente</h5></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <strong>Nombre:</strong> {{ perfil.user.first_name }} {{ perfil.user.last_name }}
+        </div>
+        <div class="col-md-6">
+          <strong>Usuario:</strong> {{ perfil.user.username }}
+        </div>
+        <div class="col-md-6">
+          <strong>Correo:</strong> {{ perfil.user.email|default:"—" }}
+        </div>
+        <div class="col-md-6">
+          <strong>Género:</strong> {{ perfil.genero_usuario|default:"—" }}
+        </div>
+        <div class="col-md-6">
+          <strong>Cédula:</strong> {{ perfil.cedula_usuario|default:"—" }}
+        </div>
+        <div class="col-md-6">
+          <strong>Teléfono:</strong> {{ perfil.telefono_usuario|default:"—" }}
+        </div>
+        <div class="col-12">
+          <strong>Dirección:</strong> {{ perfil.direccion_usuario|default:"—" }}
+        </div>
+        <div class="col-12">
+          <strong>Registro:</strong> {{ perfil.fecha_registro_usuario|date:"d/m/Y H:i" }}
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'lista_perfiles' %}">Volver</a>
+      <a class="btn btn-outline-primary" href="{% url 'historia_paciente' perfil.id %}">Ver historia</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

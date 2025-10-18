@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Panel de Administración</h2>
+
+    <div class="row g-4">
+        <!-- Registrar Usuario -->
+        <div class="col-md-4">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Registrar Usuario</h5>
+                    <p class="card-text">Crea cuentas nuevas para doctores o pacientes.</p>
+                    <a href="{% url 'registro' %}" class="btn btn-success">Ir a Registro</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Usuarios -->
+        <div class="col-md-4">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Lista de Usuarios</h5>
+                    <p class="card-text">Consulta todos los usuarios registrados en el sistema.</p>
+                    <a class="btn btn-primary" href="{% url 'lista_usuarios' %}">Ver Lista</a>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Asignar Roles -->
+        <div class="col-md-4">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Asignar Roles</h5>
+                    <p class="card-text">Cambia el rol de un usuario (Administrador, Doctor, Paciente).</p>
+                    <a href="{% url 'asignar_roles' %}" class="btn btn-warning">Gestionar Roles</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os 
 from pathlib import Path
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Aplicaciones.Medessentia'
+    'Aplicaciones.Medessentia.apps.MedessentiaConfig',
+    
 ]
 
 MIDDLEWARE = [
@@ -55,7 +57,8 @@ ROOT_URLCONF = 'Tesis.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates',
+         BASE_DIR / 'Aplicaciones' / 'Medessentia' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -83,6 +86,7 @@ DATABASES = {
         'PORT': '3306',       # Puerto por defecto de MySQL
         'OPTIONS': {
             'charset': 'utf8mb4',
+             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             # Django ya verifica modo estricto; si quieres forzarlo:
             # 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
@@ -126,6 +130,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "Aplicaciones" / "Medessentia" / "static",]
+STATIC_ROOT = BASE_DIR / "staticfiles" 
+# URLs de login y logout
+# settings.py
+
+LOGIN_URL = '/login/'             # dónde se manda si no está autenticado
+LOGIN_REDIRECT_URL = '/redirigir/'  # dónde se manda DESPUÉS de loguearse
+LOGOUT_REDIRECT_URL = '/login/'   # a dónde va después de cerrar sesión
+# settings.py
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "tu_correo@gmail.com"
+EMAIL_HOST_PASSWORD = "tu_password_o_app_password"
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 
 
 

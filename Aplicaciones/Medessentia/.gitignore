@@ -1,0 +1,17 @@
+# Ignorar archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Ignorar archivos de editores
+.vscode/
+.idea/
+
+# Ignorar archivos de entorno virtual (si tienes alguno)
+env/
+venv/
+
+# No ignorar la carpeta templates y otros archivos importantes
+!templates/
+!Aplicaciones/
+!static/
+!migrations/

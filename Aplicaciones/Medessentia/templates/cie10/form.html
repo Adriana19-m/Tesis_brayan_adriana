@@ -1,0 +1,12 @@
+<form id="cie10_form" autocomplete="off">
+  {% csrf_token %}
+  <input type="hidden" name="id_cie10" value="{{ item.id_cie10|default:'' }}">
+  <div class="mb-3">
+    <label class="form-label">Código</label>
+    <input name="codigo" class="form-control" value="{{ item.codigo|default:'' }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Descripción</label>
+    <textarea name="descripcion" class="form-control" rows="3" required>{{ item.descripcion|default:'' }}</textarea>
+  </div>
+</form>

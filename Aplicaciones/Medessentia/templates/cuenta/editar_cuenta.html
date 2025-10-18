@@ -1,0 +1,22 @@
+<!-- templates/cuenta/editar_cuenta.html -->
+{% extends "dashboards/base_dashboard.html" %}
+
+{% block title %}Panel Doctor | Medessentia{% endblock %}
+{% block page_title %}Panel del Doctor{% endblock %}
+
+{% block content %}
+<h2>Editar mi cuenta</h2>
+<form method="post" class="card p-3">
+  {% csrf_token %}
+  <label>Nombre</label>
+  <input name="first_name" class="form-control" value="{{ user.first_name }}">
+  <label>Apellido</label>
+  <input name="last_name" class="form-control" value="{{ user.last_name }}">
+  <label>Correo</label>
+  <input name="email" type="email" class="form-control" value="{{ user.email }}">
+  <button class="btn btn-primary mt-3">Guardar</button>
+</form>
+<a href="{% url 'redirigir_segun_rol' %}" class="btn btn-outline-secondary">
+  ← Volver
+</a>
+{% endblock %}

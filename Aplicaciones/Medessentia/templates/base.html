@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Medessentia{% endblock %}</title>
+</head>
+<body>
+    <header>
+        {% if user.is_authenticated %}
+            <p>Bienvenido, {{ user.first_name }} | <a href="{% url 'logout' %}">Cerrar sesión</a></p>
+        {% else %}
+            <p><a href="{% url 'registro_paciente' %}">Registrarse</a>
+        {% endif %}
+        <hr>
+    </header>
+
+    {% if messages %}
+        <ul>
+            {% for message in messages %}
+                <li style="color:red;">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</body>
+</html>

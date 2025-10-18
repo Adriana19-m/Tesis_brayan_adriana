@@ -1,0 +1,682 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Medessentia · Inicio</title>
+  <meta name="description" content="Plataforma de gestión médica">
+  <meta name="keywords" content="salud, médicos, clínica, pacientes">
+
+  <!-- Favicons -->
+  <link href="{% static 'medilab/assets/img/favicon.png' %}" rel="icon">
+  <link href="{% static 'medilab/assets/img/apple-touch-icon.png' %}" rel="apple-touch-icon">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Raleway:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Vendor CSS -->
+  <link href="{% static 'medilab/assets/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/aos/aos.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/fontawesome-free/css/all.min.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/glightbox/css/glightbox.min.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+
+  <!-- Main CSS -->
+  <link href="{% static 'medilab/assets/css/main.css' %}" rel="stylesheet">
+</head>
+
+<body class="index-page">
+
+  <!-- ======= Header ======= -->
+  <header id="header" class="header sticky-top">
+
+    <div class="topbar d-flex align-items-center">
+      <div class="container d-flex justify-content-center justify-content-md-between">
+        <div class="contact-info d-flex align-items-center">
+          <i class="bi bi-envelope d-flex align-items-center">
+            <a href="mailto:info@medessentia.com">info@medessentia.com</a>
+          </i>
+          <i class="bi bi-phone d-flex align-items-center ms-4"><span>+593 000 000 000</span></i>
+        </div>
+        <div class="d-none d-md-flex align-items-center">
+          {% if user.is_authenticated %}
+            <span class="me-3">Hola, {{ user.first_name|default:user.username }}</span>
+            <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-secondary">Cerrar sesión</a>
+          {% else %}
+            <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary me-2">Iniciar sesión</a>
+            <a href="{% url 'registro_paciente' %}" class="btn btn-sm btn-primary">Registrarse (Paciente)</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="branding d-flex align-items-center">
+      <div class="container position-relative d-flex align-items-center justify-content-between">
+        <a href="#" class="logo d-flex align-items-center me-auto">
+          <h1 class="sitename">Medessentia</h1>
+        </a>
+
+        <nav id="navmenu" class="navmenu">
+          <ul>
+            <li><a href="#hero" class="active">Inicio</a></li>
+            <li><a href="#about">Nosotros</a></li>
+            <li><a href="#services">Servicios</a></li>
+            <li><a href="#departments">Especialidades</a></li>
+            <li><a href="#doctors">Médicos</a></li>
+            <li><a href="#contact">Contacto</a></li>
+            {% if user.is_authenticated and user.groups.filter(name="Paciente").exists %}
+              <li><a href="{% url 'panel_paciente' %}">Mi Panel</a></li>
+            {% endif %}
+          </ul>
+          <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+        </nav>
+
+        <a class="cta-btn d-none d-sm-block" href="#appointment">Agendar Cita</a>
+      </div>
+    </div>
+  </header>
+  <!-- End Header -->
+
+  <main class="main">
+
+    <!-- ======= Hero ======= -->
+    <section id="hero" class="hero section light-background">
+      <img src="{% static 'medilab/assets/img/hero-bg.jpg' %}" alt="" data-aos="fade-in">
+
+      <div class="container position-relative">
+        <div class="welcome position-relative" data-aos="fade-down" data-aos-delay="100">
+          <h2>BIENVENID@ A MEDESSENTIA</h2>
+          <p>Salud digital para pacientes y profesionales.</p>
+        </div>
+
+        <div class="content row gy-4">
+          <div class="col-lg-4 d-flex align-items-stretch">
+            <div class="why-box" data-aos="zoom-out" data-aos-delay="200">
+              <h3>¿Por qué elegirnos?</h3>
+              <p>
+                Citas en línea, historial clínico y seguimiento de signos vitales desde cualquier dispositivo.
+              </p>
+              <div class="text-center">
+                <a href="#about" class="more-btn"><span>Saber más</span> <i class="bi bi-chevron-right"></i></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-8 d-flex align-items-stretch">
+            <div class="d-flex flex-column justify-content-center">
+              <div class="row gy-4">
+
+                <div class="col-xl-4 d-flex align-items-stretch">
+                  <div class="icon-box" data-aos="zoom-out" data-aos-delay="300">
+                    <i class="bi bi-clipboard-data"></i>
+                    <h4>Seguimiento</h4>
+                    <p>Control de signos vitales y evolución.</p>
+                  </div>
+                </div>
+
+                <div class="col-xl-4 d-flex align-items-stretch">
+                  <div class="icon-box" data-aos="zoom-out" data-aos-delay="400">
+                    <i class="bi bi-gem"></i>
+                    <h4>Calidad</h4>
+                    <p>Buenas prácticas y seguridad de la información.</p>
+                  </div>
+                </div>
+
+                <div class="col-xl-4 d-flex align-items-stretch">
+                  <div class="icon-box" data-aos="zoom-out" data-aos-delay="500">
+                    <i class="bi bi-inboxes"></i>
+                    <h4>Organización</h4>
+                    <p>Paneles para pacientes, doctores y administración.</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div><!-- End Content -->
+      </div>
+    </section>
+    <!-- /Hero -->
+
+    <!-- ======= About ======= -->
+    <section id="about" class="about section">
+      <div class="container">
+        <div class="row gy-4 gx-5">
+          <div class="col-lg-6 position-relative align-self-start" data-aos="fade-up" data-aos-delay="200">
+            <img src="{% static 'medilab/assets/img/about.jpg' %}" class="img-fluid" alt="">
+            <a href="https://www.youtube.com/watch?v=Y7f98aduVJ8" class="glightbox pulsating-play-btn"></a>
+          </div>
+
+          <div class="col-lg-6 content" data-aos="fade-up" data-aos-delay="100">
+            <h3>Sobre Medessentia</h3>
+            <p>Plataforma pensada para optimizar la atención y el seguimiento de pacientes.</p>
+            <ul>
+              <li>
+                <i class="fa-solid fa-vial-circle-check"></i>
+                <div>
+                  <h5>Resultados confiables</h5>
+                  <p>Registros estructurados para decisiones clínicas.</p>
+                </div>
+              </li>
+              <li>
+                <i class="fa-solid fa-pump-medical"></i>
+                <div>
+                  <h5>Herramientas modernas</h5>
+                  <p>Citas, prescripciones y comunicación segura.</p>
+                </div>
+              </li>
+              <li>
+                <i class="fa-solid fa-heart-circle-xmark"></i>
+                <div>
+                  <h5>Enfoque humano</h5>
+                  <p>Interfaces simples y accesibles para todos.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    <!-- /About -->
+
+    <!-- ======= Stats ======= -->
+    <section id="stats" class="stats section light-background">
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <div class="row gy-4">
+          <div class="col-lg-3 col-md-6 d-flex flex-column align-items-center">
+            <i class="fa-solid fa-user-doctor"></i>
+            <div class="stats-item">
+              <span data-purecounter-start="0" data-purecounter-end="12" data-purecounter-duration="1" class="purecounter"></span>
+              <p>Médicos</p>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 d-flex flex-column align-items-center">
+            <i class="fa-regular fa-hospital"></i>
+            <div class="stats-item">
+              <span data-purecounter-start="0" data-purecounter-end="6" data-purecounter-duration="1" class="purecounter"></span>
+              <p>Áreas</p>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 d-flex flex-column align-items-center">
+            <i class="fas fa-flask"></i>
+            <div class="stats-item">
+              <span data-purecounter-start="0" data-purecounter-end="3" data-purecounter-duration="1" class="purecounter"></span>
+              <p>Labs</p>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 d-flex flex-column align-items-center">
+            <i class="fas fa-award"></i>
+            <div class="stats-item">
+              <span data-purecounter-start="0" data-purecounter-end="20" data-purecounter-duration="1" class="purecounter"></span>
+              <p>Reconocimientos</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- /Stats -->
+
+    <!-- ======= Services ======= -->
+    <section id="services" class="services section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Servicios</h2>
+        <p>Atención integral y seguimiento continuo.</p>
+      </div>
+
+      <div class="container">
+        <div class="row gy-4">
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+            <div class="service-item position-relative">
+              <div class="icon"><i class="fas fa-heartbeat"></i></div>
+              <h3>Control</h3>
+              <p>Signos vitales y notificaciones.</p>
+            </div>
+          </div>
+
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+            <div class="service-item position-relative">
+              <div class="icon"><i class="fas fa-pills"></i></div>
+              <h3>Tratamientos</h3>
+              <p>Esquemas de medicación y recordatorios.</p>
+            </div>
+          </div>
+
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+            <div class="service-item position-relative">
+              <div class="icon"><i class="fas fa-hospital-user"></i></div>
+              <h3>Teleconsulta</h3>
+              <p>Contacta con tu médico desde casa.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- /Services -->
+
+    <!-- ======= Appointment ======= -->
+    <section id="appointment" class="appointment section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Agendar cita</h2>
+        <p>Solicita tu cita en pocos pasos.</p>
+      </div>
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <!-- NOTA: reemplaza action por una URL propia cuando implementes el formulario -->
+        <form action="#" method="post" role="form" class="php-email-form">
+          {% csrf_token %}
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <input type="text" name="name" class="form-control" placeholder="Tu nombre" required>
+            </div>
+            <div class="col-md-4 form-group mt-3 mt-md-0">
+              <input type="email" class="form-control" name="email" placeholder="Tu correo" required>
+            </div>
+            <div class="col-md-4 form-group mt-3 mt-md-0">
+              <input type="tel" class="form-control" name="phone" placeholder="Tu teléfono" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 form-group mt-3">
+              <input type="datetime-local" name="date" class="form-control" required>
+            </div>
+            <div class="col-md-4 form-group mt-3">
+              <select name="department" class="form-select" required>
+                <option value="">Selecciona área</option>
+                <option>Medicina General</option>
+                <option>Cardiología</option>
+                <option>Pediatría</option>
+              </select>
+            </div>
+            <div class="col-md-4 form-group mt-3">
+              <select name="doctor" class="form-select" required>
+                <option value="">Selecciona médico</option>
+                <option>Doctor 1</option>
+                <option>Doctor 2</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <textarea class="form-control" name="message" rows="5" placeholder="Mensaje (opcional)"></textarea>
+          </div>
+          <div class="mt-3">
+            <div class="loading">Cargando</div>
+            <div class="error-message"></div>
+            <div class="sent-message">¡Solicitud enviada con éxito!</div>
+            <div class="text-center"><button type="submit">Solicitar</button></div>
+          </div>
+        </form>
+      </div>
+    </section>
+    <!-- /Appointment -->
+
+    <!-- ======= Departments ======= -->
+    <section id="departments" class="departments section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Especialidades</h2>
+        <p>Conoce nuestras áreas de atención.</p>
+      </div>
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <div class="row">
+          <div class="col-lg-3">
+            <ul class="nav nav-tabs flex-column">
+              <li class="nav-item"><a class="nav-link active show" data-bs-toggle="tab" href="#dep-1">Cardiología</a></li>
+              <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#dep-2">Neurología</a></li>
+              <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#dep-3">Pediatría</a></li>
+              <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#dep-4">Oftalmología</a></li>
+            </ul>
+          </div>
+          <div class="col-lg-9 mt-4 mt-lg-0">
+            <div class="tab-content">
+              <div class="tab-pane active show" id="dep-1">
+                <div class="row">
+                  <div class="col-lg-8 details order-2 order-lg-1">
+                    <h3>Cardiología</h3>
+                    <p class="fst-italic">Diagnóstico y tratamiento de enfermedades del corazón.</p>
+                    <p>Evaluaciones, pruebas y seguimiento personalizado.</p>
+                  </div>
+                  <div class="col-lg-4 text-center order-1 order-lg-2">
+                    <img src="{% static 'medilab/assets/img/departments-1.jpg' %}" alt="" class="img-fluid">
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane" id="dep-2">
+                <div class="row">
+                  <div class="col-lg-8 details order-2 order-lg-1">
+                    <h3>Neurología</h3>
+                    <p>Atención a trastornos del sistema nervioso.</p>
+                  </div>
+                  <div class="col-lg-4 text-center order-1 order-lg-2">
+                    <img src="{% static 'medilab/assets/img/departments-2.jpg' %}" alt="" class="img-fluid">
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane" id="dep-3">
+                <div class="row">
+                  <div class="col-lg-8 details order-2 order-lg-1">
+                    <h3>Pediatría</h3>
+                    <p>Cuidado integral para niños y niñas.</p>
+                  </div>
+                  <div class="col-lg-4 text-center order-1 order-lg-2">
+                    <img src="{% static 'medilab/assets/img/departments-4.jpg' %}" alt="" class="img-fluid">
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane" id="dep-4">
+                <div class="row">
+                  <div class="col-lg-8 details order-2 order-lg-1">
+                    <h3>Oftalmología</h3>
+                    <p>Salud visual y procedimientos ambulatorios.</p>
+                  </div>
+                  <div class="col-lg-4 text-center order-1 order-lg-2">
+                    <img src="{% static 'medilab/assets/img/departments-5.jpg' %}" alt="" class="img-fluid">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>      
+    </section>
+    <!-- /Departments -->
+
+    <!-- ======= Doctors ======= -->
+    <section id="doctors" class="doctors section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Médicos</h2>
+        <p>Conoce parte de nuestro equipo.</p>
+      </div>
+
+      <div class="container">
+        <div class="row gy-4">
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100">
+            <div class="team-member d-flex align-items-start">
+              <div class="pic"><img src="{% static 'medilab/assets/img/doctors/doctors-1.jpg' %}" class="img-fluid" alt=""></div>
+              <div class="member-info">
+                <h4>Walter White</h4>
+                <span>Director Médico</span>
+                <p>Experto en gestión clínica.</p>
+                <div class="social">
+                  <a href="#"><i class="bi bi-twitter-x"></i></a>
+                  <a href="#"><i class="bi bi-facebook"></i></a>
+                  <a href="#"><i class="bi bi-instagram"></i></a>
+                  <a href="#"><i class="bi bi-linkedin"></i></a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="200">
+            <div class="team-member d-flex align-items-start">
+              <div class="pic"><img src="{% static 'medilab/assets/img/doctors/doctors-2.jpg' %}" class="img-fluid" alt=""></div>
+              <div class="member-info">
+                <h4>Sarah Johnson</h4>
+                <span>Anestesióloga</span>
+                <p>Atención segura en procedimientos.</p>
+                <div class="social">
+                  <a href="#"><i class="bi bi-twitter-x"></i></a>
+                  <a href="#"><i class="bi bi-facebook"></i></a>
+                  <a href="#"><i class="bi bi-instagram"></i></a>
+                  <a href="#"><i class="bi bi-linkedin"></i></a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="300">
+            <div class="team-member d-flex align-items-start">
+              <div class="pic"><img src="{% static 'medilab/assets/img/doctors/doctors-3.jpg' %}" class="img-fluid" alt=""></div>
+              <div class="member-info">
+                <h4>William Anderson</h4>
+                <span>Cardiólogo</span>
+                <p>Prevención y manejo de ECV.</p>
+                <div class="social">
+                  <a href="#"><i class="bi bi-twitter-x"></i></a>
+                  <a href="#"><i class="bi bi-facebook"></i></a>
+                  <a href="#"><i class="bi bi-instagram"></i></a>
+                  <a href="#"><i class="bi bi-linkedin"></i></a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="400">
+            <div class="team-member d-flex align-items-start">
+              <div class="pic"><img src="{% static 'medilab/assets/img/doctors/doctors-4.jpg' %}" class="img-fluid" alt=""></div>
+              <div class="member-info">
+                <h4>Amanda Jepson</h4>
+                <span>Neurocirujana</span>
+                <p>Experiencia en procedimientos complejos.</p>
+                <div class="social">
+                  <a href="#"><i class="bi bi-twitter-x"></i></a>
+                  <a href="#"><i class="bi bi-facebook"></i></a>
+                  <a href="#"><i class="bi bi-instagram"></i></a>
+                  <a href="#"><i class="bi bi-linkedin"></i></a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    <!-- /Doctors -->
+
+    <!-- ======= FAQ ======= -->
+    <section id="faq" class="faq section light-background">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Preguntas frecuentes</h2>
+        <p>Resolvemos tus dudas más comunes.</p>
+      </div>
+
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-10" data-aos="fade-up" data-aos-delay="100">
+            <div class="faq-container">
+
+              <div class="faq-item faq-active">
+                <h3>¿Cómo me registro como paciente?</h3>
+                <div class="faq-content">
+                  <p>Puedes hacerlo desde el botón “Registrarse (Paciente)” del encabezado.</p>
+                </div>
+                <i class="faq-toggle bi bi-chevron-right"></i>
+              </div>
+
+              <div class="faq-item">
+                <h3>Olvidé mi contraseña</h3>
+                <div class="faq-content">
+                  <p>Usa el enlace “¿Olvidaste tu contraseña?” en la pantalla de inicio de sesión.</p>
+                </div>
+                <i class="faq-toggle bi bi-chevron-right"></i>
+              </div>
+
+              <div class="faq-item">
+                <h3>¿Puedo ver mis signos vitales registrados?</h3>
+                <div class="faq-content">
+                  <p>Sí, desde tu panel de paciente en el menú “Signos vitales”.</p>
+                </div>
+                <i class="faq-toggle bi bi-chevron-right"></i>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- /FAQ -->
+
+    <!-- ======= Gallery ======= -->
+    <section id="gallery" class="gallery section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Galería</h2>
+        <p>Conoce nuestras instalaciones.</p>
+      </div>
+
+      <div class="container-fluid" data-aos="fade-up" data-aos-delay="100">
+        <div class="row g-0">
+          {% for i in "12345678" %}
+            <div class="col-lg-3 col-md-4">
+              <div class="gallery-item">
+                <a href="{% static 'medilab/assets/img/gallery/gallery-'|add:i|add:'.jpg' %}" class="glightbox" data-gallery="images-gallery">
+                  <img src="{% static 'medilab/assets/img/gallery/gallery-'|add:i|add:'.jpg' %}" alt="" class="img-fluid">
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    <!-- /Gallery -->
+
+    <!-- ======= Contact ======= -->
+    <section id="contact" class="contact section">
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Contacto</h2>
+        <p>Escríbenos para más información.</p>
+      </div>
+
+      <div class="mb-5" data-aos="fade-up" data-aos-delay="200">
+        <iframe style="border:0; width: 100%; height: 270px;"
+          src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d48389.78314118045!2d-74.006138!3d40.710059!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a22a3bda30d%3A0xb89d1fe6bc499443!2sDowntown%20Conference%20Center!5e0!3m2!1ses!2sec!4v1676961268712"
+          frameborder="0" allowfullscreen loading="lazy"></iframe>
+      </div>
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <div class="row gy-4">
+
+          <div class="col-lg-4">
+            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="300">
+              <i class="bi bi-geo-alt flex-shrink-0"></i>
+              <div>
+                <h3>Ubicación</h3>
+                <p>A108 Adam Street, New York, NY 535022</p>
+              </div>
+            </div>
+            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="400">
+              <i class="bi bi-telephone flex-shrink-0"></i>
+              <div>
+                <h3>Teléfono</h3>
+                <p>+593 000 000 000</p>
+              </div>
+            </div>
+            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="500">
+              <i class="bi bi-envelope flex-shrink-0"></i>
+              <div>
+                <h3>Email</h3>
+                <p>info@medessentia.com</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <!-- Reemplaza action="#" por tu vista de contacto si la implementas -->
+            <form action="#" method="post" class="php-email-form" data-aos="fade-up" data-aos-delay="200">
+              {% csrf_token %}
+              <div class="row gy-4">
+                <div class="col-md-6"><input type="text" name="name" class="form-control" placeholder="Tu nombre" required></div>
+                <div class="col-md-6"><input type="email" class="form-control" name="email" placeholder="Tu correo" required></div>
+                <div class="col-md-12"><input type="text" class="form-control" name="subject" placeholder="Asunto" required></div>
+                <div class="col-md-12"><textarea class="form-control" name="message" rows="6" placeholder="Mensaje" required></textarea></div>
+                <div class="col-md-12 text-center">
+                  <div class="loading">Cargando</div>
+                  <div class="error-message"></div>
+                  <div class="sent-message">Tu mensaje ha sido enviado. ¡Gracias!</div>
+                  <button type="submit">Enviar</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    <!-- /Contact -->
+
+  </main>
+
+  <!-- ======= Footer ======= -->
+  <footer id="footer" class="footer light-background">
+    <div class="container footer-top">
+      <div class="row gy-4">
+        <div class="col-lg-4 col-md-6 footer-about">
+          <a href="#" class="logo d-flex align-items-center"><span class="sitename">Medessentia</span></a>
+          <div class="footer-contact pt-3">
+            <p>A108 Adam Street</p>
+            <p>New York, NY 535022</p>
+            <p class="mt-3"><strong>Tel:</strong> <span>+593 000 000 000</span></p>
+            <p><strong>Email:</strong> <span>info@medessentia.com</span></p>
+          </div>
+          <div class="social-links d-flex mt-4">
+            <a href="#"><i class="bi bi-twitter-x"></i></a>
+            <a href="#"><i class="bi bi-facebook"></i></a>
+            <a href="#"><i class="bi bi-instagram"></i></a>
+            <a href="#"><i class="bi bi-linkedin"></i></a>
+          </div>
+        </div>
+
+        <div class="col-lg-2 col-md-3 footer-links">
+          <h4>Enlaces</h4>
+          <ul>
+            <li><a href="#hero">Inicio</a></li>
+            <li><a href="#about">Nosotros</a></li>
+            <li><a href="#services">Servicios</a></li>
+            <li><a href="#contact">Contacto</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-2 col-md-3 footer-links">
+          <h4>Servicios</h4>
+          <ul>
+            <li><a href="#services">Telemedicina</a></li>
+            <li><a href="#services">Consultas</a></li>
+            <li><a href="#services">Laboratorio</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-4 col-md-12">
+          <h4>Acceso</h4>
+          {% if user.is_authenticated %}
+            <a href="{% url 'redirigir_segun_rol' %}" class="btn btn-primary btn-sm">Ir a mi panel</a>
+          {% else %}
+            <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm me-2">Iniciar sesión</a>
+            <a href="{% url 'registro_paciente' %}" class="btn btn-primary btn-sm">Registrarse (Paciente)</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="container copyright text-center mt-4">
+      <p>© <strong class="px-1 sitename">Medessentia</strong> · Todos los derechos reservados</p>
+      <div class="credits">
+        Diseñado a partir de plantilla <a href="https://bootstrapmade.com/">BootstrapMade</a> · Distribuida por ThemeWagon
+      </div>
+    </div>
+  </footer>
+  <!-- /Footer -->
+
+  <!-- Scroll Top -->
+  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
+    <i class="bi bi-arrow-up-short"></i>
+  </a>
+
+  <!-- Preloader -->
+  <div id="preloader"></div>
+
+  <!-- Vendor JS -->
+  <script src="{% static 'medilab/assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'medilab/assets/vendor/php-email-form/validate.js' %}"></script>
+  <script src="{% static 'medilab/assets/vendor/aos/aos.js' %}"></script>
+  <script src="{% static 'medilab/assets/vendor/glightbox/js/glightbox.min.js' %}"></script>
+  <script src="{% static 'medilab/assets/vendor/purecounter/purecounter_vanilla.js' %}"></script>
+  <script src="{% static 'medilab/assets/vendor/swiper/swiper-bundle.min.js' %}"></script>
+
+  <!-- Main JS -->
+  <script src="{% static 'medilab/assets/js/main.js' %}"></script>
+</body>
+</html>

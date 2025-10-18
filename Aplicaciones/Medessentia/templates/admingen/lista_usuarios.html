@@ -1,0 +1,215 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Usuarios del sistema{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Título + resumen de filtros -->
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div>
+      <h1 class="h3 mb-1">Usuarios del sistema</h1>
+      <p class="text-muted mb-0">
+        {% if rol %}Rol: <strong>{{ rol }}</strong>. {% endif %}
+        {% if estado %}Estado: <strong>{{ estado|title }}</strong>. {% endif %}
+        {% if q %}Búsqueda: <code>{{ q }}</code>.{% endif %}
+        {% if not rol and not estado and not q %}Mostrando todos los usuarios.{% endif %}
+      </p>
+    </div>
+    <div class="ms-3">
+      <a class="btn btn-outline-success"
+         href="{% url 'exportar_usuarios_csv' %}?rol={{ rol }}&estado={{ estado }}&q={{ q|urlencode }}&order={{ order }}">
+        Exportar CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Total usuarios</div>
+          <div class="h4 mb-0">{{ kpis.total }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Activos</div>
+          <div class="h4 mb-0">{{ kpis.activos }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Inactivos</div>
+          <div class="h4 mb-0">{{ kpis.inactivos }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Pacientes</div>
+          <div class="h4 mb-0">{{ kpis.por_rol.Paciente|default:"0" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Rol</label>
+          <select name="rol" class="form-select">
+            <option value="">(Todos)</option>
+            <option value="Administrador" {% if rol == "Administrador" %}selected{% endif %}>Administrador</option>
+            <option value="Doctor" {% if rol == "Doctor" %}selected{% endif %}>Doctor</option>
+            <option value="Paciente" {% if rol == "Paciente" %}selected{% endif %}>Paciente</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Estado</label>
+          <select name="estado" class="form-select">
+            <option value="">(Todos)</option>
+            <option value="activo" {% if estado == "activo" %}selected{% endif %}>Activo</option>
+            <option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivo</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ordenar por</label>
+          <select name="order" class="form-select">
+            <option value="date_joined_desc" {% if order == "date_joined_desc" %}selected{% endif %}>Más reciente</option>
+            <option value="date_joined_asc"  {% if order == "date_joined_asc" %}selected{% endif %}>Más antiguo</option>
+            <option value="last_login_desc"  {% if order == "last_login_desc" %}selected{% endif %}>Último acceso (desc)</option>
+            <option value="last_login_asc"   {% if order == "last_login_asc" %}selected{% endif %}>Último acceso (asc)</option>
+            <option value="username_asc"     {% if order == "username_asc" %}selected{% endif %}>Usuario (A–Z)</option>
+            <option value="username_desc"    {% if order == "username_desc" %}selected{% endif %}>Usuario (Z–A)</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Buscar</label>
+          <input type="text" name="q" value="{{ q }}" class="form-control"
+                 placeholder="Usuario, nombre, correo, cédula...">
+        </div>
+      </div>
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary">Aplicar</button>
+        <a class="btn btn-outline-secondary" href="{% url 'lista_usuarios' %}">Limpiar</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Tabla -->
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Usuario</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol(es)</th>
+            <th>Estado</th>
+            <th>Último acceso</th>
+            <th>Alta</th>
+            <th>Cédula</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          {% with p=u.perfil %}
+          <tr>
+            <td class="text-nowrap">{{ u.username }}</td>
+            <td class="text-nowrap">{{ u.first_name }} {{ u.last_name }}</td>
+            <td>{{ u.email|default:"—" }}</td>
+            <td class="text-nowrap">
+              {% for g in u.groups.all %}
+                <span class="badge badge-role-{{ g.name }} me-1">{{ g.name }}</span>
+              {% empty %}
+                —
+              {% endfor %}
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge text-bg-success">Activo</span>
+              {% else %}
+                <span class="badge text-bg-danger">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              {% if u.last_login %}{{ u.last_login|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            </td>
+            <td class="text-nowrap">{{ u.date_joined|date:"d/m/Y H:i" }}</td>
+            <td class="text-nowrap">{{ p.cedula_usuario|default:"—" }}</td>
+            <td class="text-nowrap">{{ p.telefono_usuario|default:"—" }}</td>
+            <td>{{ p.direccion_usuario|default:"—" }}</td>
+            <td class="text-center text-nowrap">
+
+              <!-- Activar/Desactivar -->
+              <form method="post" action="{% url 'toggle_activo' u.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn btn-sm {% if u.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                  {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                </button>
+              </form>
+
+              <!-- Asignar rol (lleva a la vista de roles) -->
+              <a href="{% url 'asignar_roles' %}" class="btn btn-sm btn-outline-secondary ms-1">
+                Asignar rol
+              </a>
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="11" class="text-center text-muted py-4">
+              No hay usuarios que coincidan con el filtro.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="card-footer">
+      <nav>
+        <ul class="pagination mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.previous_page_number }}&rol={{ rol }}&estado={{ estado }}&q={{ q|urlencode }}&order={{ order }}">«</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">«</span></li>
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+          </li>
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.next_page_number }}&rol={{ rol }}&estado={{ estado }}&q={{ q|urlencode }}&order={{ order }}">»</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">»</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

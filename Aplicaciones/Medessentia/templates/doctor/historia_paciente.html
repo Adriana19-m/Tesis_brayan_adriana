@@ -1,0 +1,170 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% block title %}Historia · {{ perfil.user.get_full_name|default:perfil.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Encabezado + acciones -->
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">
+        Historia clínica de {{ perfil.user.first_name }} {{ perfil.user.last_name }}
+        <span class="text-muted">({{ perfil.user.username }})</span>
+      </h4>
+      <div class="text-muted small">
+        Cédula: {{ perfil.cedula_usuario }} · Tel: {{ perfil.telefono_usuario|default:"—" }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'lista_perfiles' %}">
+        ← Volver
+      </a>
+      <a class="btn btn-primary" href="{% url 'nuevo_signo' perfil.id %}">
+        + Añadir signos
+      </a>
+      <button class="btn btn-outline-dark" onclick="window.print()">Imprimir</button>
+    </div>
+  </div>
+
+  <!-- Filtros rápidos -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Buscar</label>
+          <input id="tabla-search" type="text" class="form-control"
+                 placeholder="Filtrar por fecha, PA, FC, FR, Temp, SpO₂, peso, glucosa, hemoglobina, observaciones…">
+          <div class="form-text">Filtro en vivo (solo afecta la vista actual).</div>
+        </div>
+        <div class="col-md-8 text-end">
+          <span class="badge text-bg-secondary">Registros: {{ signos|length }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de historia -->
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tabla-historia">
+        <thead class="table-light align-middle">
+          <tr>
+            <th class="text-nowrap">Fecha</th>
+            <th class="text-nowrap">PAS</th>
+            <th class="text-nowrap">PAD</th>
+            <th class="text-nowrap">PAM</th>
+            <th class="text-nowrap">PA</th>
+            <th class="text-nowrap">Temp (°C)</th>
+            <th class="text-nowrap">FR (rpm)</th>
+            <th class="text-nowrap">FC (lpm)</th>
+            <th class="text-nowrap">SpO₂ (%)</th>
+            <th class="text-nowrap">Peso (kg)</th>
+            <th class="text-nowrap">Talla (m)</th>
+            <th class="text-nowrap">IMC</th>
+            <th class="text-nowrap">Glucosa (mg/dL)</th>
+            <th class="text-nowrap">Hb (g/dL)</th>
+            <th style="min-width:150px;" class="text-nowrap">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in signos %}
+          <tr>
+            <td class="text-nowrap">{{ s.fecha_registro|date:"d/m/Y H:i" }}</td>
+            <td>{{ s.pa_sistolica|default:"—" }}</td>
+            <td>{{ s.pa_diastolica|default:"—" }}</td>
+            <td>{% if s.pa_media %}{{ s.pa_media }}{% else %}—{% endif %}</td>
+            <td>{{ s.presion_arterial|default:"—" }}</td>
+            <td>{{ s.temperatura }}</td>
+            <td>{{ s.frecuencia_respiratoria }}</td>
+            <td>{{ s.frecuencia_cardiaca }}</td>
+            <td>{{ s.saturacion_oxigeno }}</td>
+            <td>{{ s.peso }}</td>
+            <td>{{ s.talla }}</td>
+            <td>{{ s.imc|default:"—" }}</td>
+            <td>{{ s.glucosa_capilar|default:"—" }}</td>
+            <td>{{ s.hemoglobina|default:"—" }}</td>
+            <td class="text-nowrap">
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{% url 'editar_signo_vital' s.id %}">
+                Editar
+              </a>
+              <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#confirmDeleteModal"
+                      data-id="{{ s.id }}"
+                      data-fecha="{{ s.fecha_registro|date:'d/m/Y H:i' }}">
+                Eliminar
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="15" class="text-center text-muted py-4">Sin registros.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer text-muted small">
+      Mostrando los signos vitales registrados para {{ perfil.user.get_full_name|default:perfil.user.username }}.
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmar eliminación -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="deleteForm" method="post">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Eliminar registro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          ¿Eliminar el registro de signos del <strong id="delFecha">—</strong>? Esta acción no se puede deshacer.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Filtro y lógica del modal -->
+<script>
+  // Filtro en vivo
+  (function () {
+    const input = document.getElementById('tabla-search');
+    const rows  = () => Array.from(document.querySelectorAll('#tabla-historia tbody tr'));
+    function filtrar() {
+      const q = (input.value || '').toLowerCase().trim();
+      rows().forEach(tr => {
+        const text = tr.innerText.toLowerCase();
+        tr.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+    input?.addEventListener('input', filtrar);
+  })();
+
+  // Modal eliminar
+  (function () {
+    const modalEl = document.getElementById('confirmDeleteModal');
+    modalEl?.addEventListener('show.bs.modal', (ev) => {
+      const btn   = ev.relatedTarget;
+      const id    = btn.getAttribute('data-id');
+      const fecha = btn.getAttribute('data-fecha');
+
+      // Pinta fecha en el modal
+      document.getElementById('delFecha').textContent = fecha;
+
+      // Configura action del form al endpoint de borrado
+      const form = document.getElementById('deleteForm');
+      form.setAttribute('action', `{% url 'eliminar_signo_vital' 0 %}`.replace('/0/', `/${id}/`));
+    });
+  })();
+</script>
+{% endblock %}

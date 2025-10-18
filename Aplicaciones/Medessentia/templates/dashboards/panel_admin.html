@@ -1,0 +1,73 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% block title %}Panel Administrador | Medessentia{% endblock %}
+{% block page_title %}Panel del Administrador{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-people fs-2 me-3"></i>
+        <div>
+          <div class="fw-bold">Usuarios</div>
+          <div class="text-muted small">Gestión de cuentas</div>
+        </div>
+      </div>
+      <a class="btn btn-primary mt-3 w-100" href="{% url 'lista_usuarios' %}">Ver usuarios</a>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-shield-check fs-2 me-3"></i>
+        <div>
+          <div class="fw-bold">Roles</div>
+          <div class="text-muted small">Asignar/Modificar</div>
+        </div>
+      </div>
+      <a class="btn btn-outline-primary mt-3 w-100" href="{% url 'asignar_roles' %}">Gestionar roles</a>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-person-plus fs-2 me-3"></i>
+        <div>
+          <div class="fw-bold">Nuevo usuario</div>
+          <div class="text-muted small">Alta manual</div>
+        </div>
+      </div>
+      <a class="btn btn-outline-primary mt-3 w-100" href="{% url 'registro' %}">Crear</a>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-speedometer2 fs-2 me-3"></i>
+        <div>
+          <div class="fw-bold">Reportes</div>
+          <div class="text-muted small">Próximamente</div>
+        </div>
+      </div>
+      <button class="btn btn-outline-secondary mt-3 w-100" disabled>En construcción</button>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-calendar2-week fs-2 me-3"></i>
+        <div>
+          <div class="fw-bold">Citas</div>
+          <div class="text-muted small">citas</div>
+        </div>
+      </div>
+      <a class="btn btn-outline-primary mt-3 w-100" href="{% url 'cita_index' %}">Ver Citas</a>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

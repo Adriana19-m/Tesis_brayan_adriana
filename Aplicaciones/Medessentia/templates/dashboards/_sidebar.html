@@ -1,0 +1,43 @@
+<nav class="px-2 pb-3">
+  {% if es_admin %}
+    <div class="text-uppercase text-muted small px-2 mt-2 mb-1">Administrador</div>
+    <a href="{% url 'panel_admin' %}" class="{% if request.resolver_match.url_name == 'panel_admin' %}active{% endif %}">
+      <i class="bi bi-grid me-2"></i> Dashboard
+    </a>
+    <a href="{% url 'lista_usuarios' %}" class="{% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}">
+      <i class="bi bi-people me-2"></i> Usuarios
+    </a>
+    <a href="{% url 'asignar_roles' %}" class="{% if request.resolver_match.url_name == 'asignar_roles' %}active{% endif %}">
+      <i class="bi bi-shield-check me-2"></i> Roles
+    </a>
+    <a href="{% url 'registro' %}" class="{% if request.resolver_match.url_name == 'registro' %}active{% endif %}">
+      <i class="bi bi-person-plus me-2"></i> Nuevo usuario
+    </a>
+    <hr class="my-2">
+  {% endif %}
+
+  {% if es_doctor %}
+    <div class="text-uppercase text-muted small px-2 mt-2 mb-1">Doctor</div>
+    <a href="{% url 'panel_doctor' %}" class="{% if request.resolver_match.url_name == 'panel_doctor' %}active{% endif %}">
+      <i class="bi bi-grid me-2"></i> Dashboard
+    </a>
+    <a href="{% url 'lista_perfiles' %}" class="{% if request.resolver_match.url_name == 'lista_perfiles' %}active{% endif %}">
+      <i class="bi bi-people me-2"></i> Pacientes
+    </a>
+    <a href="{% url 'signos_vitales' %}" class="{% if request.resolver_match.url_name == 'signos_vitales' %}active{% endif %}">
+      <i class="bi bi-clipboard2-pulse me-2"></i> Signos vitales
+    </a>
+    <hr class="my-2">
+  {% endif %}
+
+  <div class="text-uppercase text-muted small px-2 mt-2 mb-1">Cuenta</div>
+  <a href="{% url 'editar_cuenta' %}" class="{% if request.resolver_match.url_name == 'editar_cuenta' %}active{% endif %}">
+    <i class="bi bi-person-gear me-2"></i> Mi cuenta
+  </a>
+  <a href="{% url 'password_change' %}">
+    <i class="bi bi-key me-2"></i> Cambiar contraseña
+  </a>
+  <a href="{% url 'logout' %}">
+    <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+  </a>
+</nav>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 640px;">
+  <h2 class="text-center mb-3">Crear cuenta de Paciente</h2>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} mt-2">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="card p-4 shadow-sm">
+    {% csrf_token %}
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Usuario</label>
+        <input name="username" class="form-control" required
+               value="{{ prefill.username|default:'' }}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Correo</label>
+        <input type="email" name="email" class="form-control" required
+               value="{{ prefill.email|default:'' }}">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Nombre</label>
+        <input name="first_name" class="form-control"
+               value="{{ prefill.first_name|default:'' }}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Apellido</label>
+        <input name="last_name" class="form-control"
+               value="{{ prefill.last_name|default:'' }}">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Contraseña</label>
+        <input type="password" name="password1" class="form-control" required>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Confirmar contraseña</label>
+        <input type="password" name="password2" class="form-control" required>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <h5 class="mb-3">Datos de perfil</h5>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Cédula (10 dígitos)</label>
+        <input name="cedula_usuario" maxlength="10" class="form-control" required
+               value="{{ prefill.cedula_usuario|default:'' }}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Teléfono (10 dígitos)</label>
+        <input name="telefono_usuario" maxlength="10" class="form-control"
+               value="{{ prefill.telefono_usuario|default:'' }}">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Dirección</label>
+      <input name="direccion_usuario" class="form-control"
+             value="{{ prefill.direccion_usuario|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Género</label>
+      <select name="genero_usuario" class="form-select">
+        <option value="">-- Selecciona --</option>
+        <option value="Masculino" {% if prefill.genero_usuario == "Masculino" %}selected{% endif %}>Masculino</option>
+        <option value="Femenino"  {% if prefill.genero_usuario == "Femenino" %}selected{% endif %}>Femenino</option>
+        <option value="Otro"      {% if prefill.genero_usuario == "Otro" %}selected{% endif %}>Otro</option>
+      </select>
+    </div>
+
+    <button class="btn btn-success w-100">Crear cuenta</button>
+  </form>
+
+  <div class="text-center mt-3">
+    <a href="{% url 'login' %}">¿Ya tienes cuenta? Inicia sesión</a>
+  </div>
+</div>
+{% endblock %}

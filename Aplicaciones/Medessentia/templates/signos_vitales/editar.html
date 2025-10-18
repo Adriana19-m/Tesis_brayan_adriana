@@ -1,0 +1,148 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% block title %}Editar signos de {{ signo.perfil_usuario.user.get_full_name|default:signo.perfil_usuario.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <h4 class="mb-3">
+    Editar signos vitales
+    <small class="text-muted d-block">Paciente: {{ signo.perfil_usuario.user.first_name }} {{ signo.perfil_usuario.user.last_name }} ({{ signo.perfil_usuario.user.username }})</small>
+  </h4>
+
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="row g-3">
+
+        <!-- Fecha -->
+        <div class="col-md-4">
+          <label class="form-label">Fecha y hora de registro</label>
+          <input name="fecha_registro" class="form-control"
+                 value="{{ signo.fecha_registro|date:'Y-m-d H:i' }}">
+          <div class="form-text">Formato: YYYY-MM-DD HH:MM</div>
+        </div>
+
+        <!-- PAS / PAD / PAM -->
+        <div class="col-md-2">
+          <label class="form-label">PAS (mmHg)</label>
+          <input name="pa_sistolica" class="form-control"
+                 value="{{ signo.pa_sistolica|default_if_none:'' }}" id="pas">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">PAD (mmHg)</label>
+          <input name="pa_diastolica" class="form-control"
+                 value="{{ signo.pa_diastolica|default_if_none:'' }}" id="pad">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">PAM (mmHg)</label>
+          <input name="pa_media" class="form-control"
+                 value="{{ signo.pa_media|default_if_none:'' }}" id="pam">
+          <div class="form-text">Se puede calcular: (2×PAD + PAS) / 3.</div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">PA (compuesta)</label>
+          <input name="presion_arterial" class="form-control"
+                 value="{{ signo.presion_arterial|default_if_none:'' }}" id="pa_compuesta">
+          <div class="form-text">Histórico de compatibilidad (ej. 120/80).</div>
+        </div>
+
+        <!-- Vitales -->
+        <div class="col-md-2">
+          <label class="form-label">Temperatura (°C)</label>
+          <input name="temperatura" class="form-control"
+                 value="{{ signo.temperatura|default_if_none:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Frecuencia respiratoria (rpm)</label>
+          <input name="frecuencia_respiratoria" class="form-control"
+                 value="{{ signo.frecuencia_respiratoria|default_if_none:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Frecuencia cardiaca (lpm)</label>
+          <input name="frecuencia_cardiaca" class="form-control"
+                 value="{{ signo.frecuencia_cardiaca|default_if_none:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Saturación O₂ (%)</label>
+          <input name="saturacion_oxigeno" class="form-control"
+                 value="{{ signo.saturacion_oxigeno|default_if_none:'' }}">
+        </div>
+
+        <!-- Antropometría -->
+        <div class="col-md-2">
+          <label class="form-label">Peso (kg)</label>
+          <input name="peso" class="form-control"
+                 value="{{ signo.peso|default_if_none:'' }}" id="peso">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Talla (m)</label>
+          <input name="talla" class="form-control"
+                 value="{{ signo.talla|default_if_none:'' }}" id="talla">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">IMC</label>
+          <input name="imc" class="form-control"
+                 value="{{ signo.imc|default_if_none:'' }}" id="imc">
+          <div class="form-text">Se calcula como peso/(talla²).</div>
+        </div>
+
+        <!-- Capilares -->
+        <div class="col-md-2">
+          <label class="form-label">Glucosa capilar (mg/dL)</label>
+          <input name="glucosa_capilar" class="form-control"
+                 value="{{ signo.glucosa_capilar|default_if_none:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Hemoglobina (g/dL)</label>
+          <input name="hemoglobina" class="form-control"
+                 value="{{ signo.hemoglobina|default_if_none:'' }}">
+        </div>
+
+        <!-- Observaciones -->
+        <div class="col-12">
+          <label class="form-label">Observaciones</label>
+          <textarea name="observaciones" class="form-control" rows="3">{{ signo.observaciones|default_if_none:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer d-flex gap-2">
+      <a class="btn btn-outline-secondary"
+         href="{% url 'historia_paciente' signo.perfil_usuario.id %}">Cancelar</a>
+      <button class="btn btn-primary">Guardar cambios</button>
+      <a class="btn btn-danger ms-auto"
+         href="{% url 'eliminar_signo_vital' signo.id %}"
+         onclick="return confirm('¿Eliminar este registro?');">Eliminar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const pas = document.getElementById('pas');
+  const pad = document.getElementById('pad');
+  const pam = document.getElementById('pam');
+  const paC = document.getElementById('pa_compuesta');
+  const peso = document.getElementById('peso');
+  const talla = document.getElementById('talla');
+  const imc  = document.getElementById('imc');
+
+  function calcPAM(){
+    const a = parseFloat(pas.value);
+    const d = parseFloat(pad.value);
+    if(!isNaN(a) && !isNaN(d)) {
+      pam.value = ((2*d + a)/3).toFixed(2);
+      paC.value = `${Math.round(a)}/${Math.round(d)}`;
+    }
+  }
+  function calcIMC(){
+    const p = parseFloat(peso.value);
+    const t = parseFloat(talla.value);
+    if(!isNaN(p) && !isNaN(t) && t>0) imc.value = (p/(t*t)).toFixed(2);
+  }
+  pas?.addEventListener('input', calcPAM);
+  pad?.addEventListener('input', calcPAM);
+  peso?.addEventListener('input', calcIMC);
+  talla?.addEventListener('input', calcIMC);
+})();
+</script>
+{% endblock %}

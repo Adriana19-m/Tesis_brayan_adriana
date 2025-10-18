@@ -1,0 +1,106 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Perfiles{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Encabezado -->
+  <div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Perfiles</h4>
+      <span class="text-muted small">
+        {{ perfiles|length }} registro{{ perfiles|length|pluralize:"s" }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <!-- Filtros -->
+    <div class="card-body border-bottom pb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Buscar</label>
+          <input id="tabla-search" type="text" class="form-control"
+                 placeholder="Filtrar por nombre, usuario, cédula, teléfono o dirección…">
+          <div class="form-text">El filtro es en vivo y solo afecta esta tabla.</div>
+        </div>
+        {% if solo_pacientes %}
+        <div class="col-md-6 text-end">
+          <span class="badge text-bg-primary">Solo pacientes</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tabla-perfiles">
+        <thead class="table-light">
+          <tr>
+            <th class="text-nowrap">Nombre</th>
+            <th class="text-nowrap">Usuario</th>
+            <th>Género</th>
+            <th class="text-nowrap">Cédula</th>
+            <th class="text-nowrap">Teléfono</th>
+            <th>Dirección</th>
+            <th class="text-nowrap">Registro</th>
+            <th class="text-center text-nowrap">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in perfiles %}
+          <tr>
+            <td class="text-nowrap">{{ p.user.first_name }} {{ p.user.last_name }}</td>
+            <td class="text-muted text-nowrap">{{ p.user.username }}</td>
+            <td>{{ p.genero_usuario|default:"—" }}</td>
+            <td class="text-nowrap">{{ p.cedula_usuario|default:"—" }}</td>
+            <td class="text-nowrap">{{ p.telefono_usuario|default:"—" }}</td>
+            <td>{{ p.direccion_usuario|default:"—" }}</td>
+            <td class="text-nowrap">{{ p.fecha_registro_usuario|date:"d/m/Y H:i" }}</td>
+            <td class="text-center text-nowrap">
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{% url 'perfil_paciente' p.id %}">
+                Perfil
+              </a>
+              <a class="btn btn-sm btn-outline-secondary"
+                 href="{% url 'historia_paciente' p.id %}">
+                Historia
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No hay perfiles para mostrar.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer text-muted small">
+      {% if solo_pacientes %}
+        Visualizando perfiles pertenecientes al grupo <strong>Paciente</strong>.
+      {% else %}
+        Visualizando todos los perfiles.
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Filtro rápido en cliente -->
+<script>
+(function () {
+  const input = document.getElementById('tabla-search');
+  const rows  = () => Array.from(document.querySelectorAll('#tabla-perfiles tbody tr'));
+  function filtrar() {
+    const q = (input.value || '').toLowerCase().trim();
+    rows().forEach(tr => {
+      const text = tr.innerText.toLowerCase();
+      tr.style.display = text.includes(q) ? '' : 'none';
+    });
+  }
+  input?.addEventListener('input', filtrar);
+})();
+</script>
+{% endblock %}

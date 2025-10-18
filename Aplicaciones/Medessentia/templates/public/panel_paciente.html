@@ -1,0 +1,70 @@
+{% extends "public/base_public.html" %}
+{% block title %}Panel del Paciente{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="row gy-4">
+      <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between">
+          <h2 class="mb-0">Panel del Paciente</h2>
+          <a href="{% url 'mi_perfil' %}" class="btn btn-primary">
+            <i class="bi bi-person-circle me-1"></i> Ver / editar perfil
+          </a>
+        </div>
+        <p class="text-muted mt-1">Bienvenido, {{ user.first_name|default:user.username }}</p>
+      </div>
+
+      <!-- Tarjeta de Perfil -->
+      <div class="col-md-6" data-aos="fade-up" data-aos-delay="100">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Mis datos</h5>
+            <ul class="mb-0">
+              <li><strong>Cédula:</strong> {{ perfil.cedula_usuario }}</li>
+              <li><strong>Teléfono:</strong> {{ perfil.telefono_usuario|default:"—" }}</li>
+              <li><strong>Dirección:</strong> {{ perfil.direccion_usuario|default:"—" }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Signos Vitales -->
+      <div class="col-md-6" data-aos="fade-up" data-aos-delay="150">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Últimos signos vitales</h5>
+            {% if signos %}
+              <ul class="list-group">
+                {% for s in signos %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  {{ s.fecha_registro|date:"d/m/Y H:i" }}
+                  <span class="badge text-bg-primary">
+                    {{ s.presion_arterial }} · FC {{ s.frecuencia_cardiaca }}
+                  </span>
+                </li>
+                {% endfor %}
+              </ul>
+              <a class="btn btn-link p-0 mt-2" href="{% url 'signos_vitales' %}">Ver todos</a>
+            {% else %}
+              <p class="text-muted">Aún no tienes registros.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Accesos rápidos -->
+      <div class="col-12" data-aos="fade-up" data-aos-delay="200">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Accesos rápidos</h5>
+            <a class="btn btn-outline-primary me-2" href="{% url 'cita_index' %}">📅 Mis citas</a>
+            <a class="btn btn-outline-secondary" href="{% url 'logout' %}">Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

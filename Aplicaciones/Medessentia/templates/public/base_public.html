@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>{% block title %}Medessentia{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Poppins:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Vendor CSS -->
+  <link href="{% static 'medilab/assets/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/aos/aos.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/glightbox/css/glightbox.min.css' %}" rel="stylesheet">
+  <link href="{% static 'medilab/assets/vendor/swiper/swiper-bundle.min.css' %}" rel="stylesheet">
+
+  <!-- Main CSS -->
+  <link href="{% static 'medilab/assets/css/main.css' %}" rel="stylesheet">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}index-page{% endblock %}">
+
+<header id="header" class="header sticky-top">
+  <!-- Topbar -->
+  <div class="topbar d-flex align-items-center">
+    <div class="container d-flex justify-content-between">
+      <div class="contact-info d-flex align-items-center">
+        <i class="bi bi-envelope d-flex align-items-center">
+          <a href="mailto:info@medessentia.com">info@medessentia.com</a>
+        </i>
+        <i class="bi bi-phone d-flex align-items-center ms-4">
+          <span>+593 000 000 000</span>
+        </i>
+      </div>
+
+      <div class="d-flex align-items-center">
+        {% if user.is_authenticated %}
+          <span class="me-3">Hola, {{ user.first_name|default:user.username }}</span>
+
+          {% if es_paciente %}
+            <a class="btn btn-sm btn-primary me-2" href="{% url 'panel_paciente' %}">Mi panel</a>
+          {% elif es_doctor %}
+            <a class="btn btn-sm btn-primary me-2" href="{% url 'panel_doctor' %}">Panel Doctor</a>
+          {% elif es_admin %}
+            <a class="btn btn-sm btn-primary me-2" href="{% url 'panel_admin' %}">Panel Admin</a>
+          {% endif %}
+
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'logout' %}">Cerrar sesión</a>
+        {% else %}
+          <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'login' %}">Iniciar sesión</a>
+          {% if not hide_register_link %}
+            <a class="btn btn-sm btn-primary" href="{% url 'registro_paciente' %}">Registrarse</a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- /Topbar -->
+
+  <!-- Branding + Nav -->
+  <div class="branding d-flex align-items-center">
+    <div class="container d-flex align-items-center justify-content-between">
+      <a href="{% url 'home_publico' %}" class="logo d-flex align-items-center me-auto">
+        <h1 class="sitename">Medessentia</h1>
+      </a>
+
+      <nav id="navmenu" class="navmenu">
+        <ul>
+          <li><a href="{% url 'home_publico' %}#hero" class="active">Inicio</a></li>
+          <li><a href="{% url 'home_publico' %}#about">Nosotros</a></li>
+          <li><a href="{% url 'home_publico' %}#services">Servicios</a></li>
+          <li><a href="{% url 'home_publico' %}#contact">Contacto</a></li>
+        </ul>
+        <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+      </nav>
+
+      {% if user.is_authenticated %}
+        {% if es_paciente %}
+          <a class="cta-btn d-none d-sm-block" href="{% url 'panel_paciente' %}">Ir a mi panel</a>
+        {% elif es_doctor %}
+          <a class="cta-btn d-none d-sm-block" href="{% url 'panel_doctor' %}">Ir a mi panel</a>
+        {% elif es_admin %}
+          <a class="cta-btn d-none d-sm-block" href="{% url 'panel_admin' %}">Ir a mi panel</a>
+        {% endif %}
+      {% else %}
+        <a class="cta-btn d-none d-sm-block" href="{% url 'login' %}">Agenda / Ingresar</a>
+      {% endif %}
+    </div>
+  </div>
+  <!-- /Branding + Nav -->
+</header>
+
+<main class="main">
+  {% block content %}{% endblock %}
+</main>
+
+<footer id="footer" class="footer light-background">
+  <div class="container copyright text-center mt-4">
+    <p>© <strong class="px-1 sitename">Medessentia</strong> · Todos los derechos reservados</p>
+  </div>
+</footer>
+
+<a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
+  <i class="bi bi-arrow-up-short"></i>
+</a>
+
+<div id="preloader"></div>
+
+<!-- Vendor JS -->
+<script src="{% static 'medilab/assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'medilab/assets/vendor/aos/aos.js' %}"></script>
+<script src="{% static 'medilab/assets/vendor/glightbox/js/glightbox.min.js' %}"></script>
+<script src="{% static 'medilab/assets/vendor/purecounter/purecounter_vanilla.js' %}"></script>
+<script src="{% static 'medilab/assets/vendor/swiper/swiper-bundle.min.js' %}"></script>
+<!-- Main JS -->
+<script src="{% static 'medilab/assets/js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

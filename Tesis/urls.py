@@ -17,10 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.shortcuts import redirect
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),               # 1) admin primero
+    path("", lambda request: redirect("redirigir_segun_rol")),
     path("", include("Aplicaciones.Medessentia.urls")),  # 2) tus rutas de app
 ]
 
