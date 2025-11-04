@@ -1,0 +1,54 @@
+<form id="formCie10" autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="id_cie10" value="{{ item.id_cie10|default:'' }}">
+    
+    <div class="mb-3">
+        <label for="codigo" class="form-label fw-bold">Código CIE-10 *</label>
+        <input type="text" id="codigo" name="codigo" class="form-control" 
+               value="{{ item.codigo|default:'' }}" 
+               required maxlength="10"
+               placeholder="Ej: A00, B20.1, etc.">
+        <div class="form-text">Ingrese el código único del diagnóstico (máximo 10 caracteres)</div>
+    </div>
+    
+    <div class="mb-4">
+        <label for="descripcion" class="form-label fw-bold">Descripción *</label>
+        <textarea id="descripcion" name="descripcion" class="form-control" 
+                  rows="5" required maxlength="500"
+                  placeholder="Descripción completa del diagnóstico...">{{ item.descripcion|default:'' }}</textarea>
+        <div class="form-text">Descripción detallada del diagnóstico (máximo 500 caracteres)</div>
+    </div>
+    
+    <div class="border-top pt-3">
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i> Cancelar
+            </button>
+            <button type="button" class="btn btn-primary btn-guardar" onclick="guardarFormulario()">
+                <i class="fas fa-save me-1"></i> Guardar
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+// Enfocar el primer campo y configurar enter para guardar
+document.addEventListener('DOMContentLoaded', function() {
+    const codigoInput = document.getElementById('codigo');
+    if (codigoInput) {
+        codigoInput.focus();
+        codigoInput.select();
+    }
+    
+    // Permitir guardar con Enter (excepto en textarea)
+    const form = document.getElementById('formCie10');
+    if (form) {
+        form.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                guardarFormulario();
+            }
+        });
+    }
+});
+</script>

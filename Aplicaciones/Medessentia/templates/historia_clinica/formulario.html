@@ -1,0 +1,368 @@
+<form id="formHistoria" autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="id_historia" value="{{ historia.id_historia|default:'' }}">
+    
+    <div class="row">
+        <!-- Columna Izquierda - Datos Básicos -->
+        <div class="col-md-6">
+            <h6 class="border-bottom pb-2 mb-3">Datos Básicos</h6>
+            
+            <!-- Selección de Paciente -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Paciente <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <input type="hidden" name="paciente_id" id="paciente_id" value="{{ historia.id_paciente.id|default:'' }}">
+                    <input type="text" class="form-control" id="paciente_nombre" 
+                           placeholder="Seleccione un paciente" 
+                           value="{% if historia %}{{ historia.id_paciente.first_name }} {{ historia.id_paciente.last_name }}{% endif %}" readonly>
+                    <input type="text" class="form-control" id="paciente_cedula" 
+                           placeholder="Cédula" 
+                           value="{% if historia %}{{ historia.id_paciente.perfil.cedula_usuario }}{% endif %}" readonly>
+                    <button type="button" class="btn btn-outline-primary" onclick="buscarPaciente()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+                <div class="form-text">Haga clic en buscar para seleccionar un paciente</div>
+            </div>
+
+            <!-- Doctor -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Doctor <span class="text-danger">*</span></label>
+                <input type="hidden" name="doctor_id" value="{{ usuario_actual.id }}">
+                <input type="text" class="form-control" value="{{ usuario_actual.first_name }} {{ usuario_actual.last_name }}" readonly>
+                <div class="form-text">Usted es el doctor asignado</div>
+            </div>
+
+            <!-- Expediente y Fecha -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">N° Expediente <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" name="expediente_no" id="expediente_no" class="form-control" 
+                                   value="{{ historia.expediente_no|default:'' }}" required maxlength="50">
+                            <button type="button" class="btn btn-outline-secondary" onclick="generarExpediente()" 
+                                    title="Generar automáticamente">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha_elaboracion" class="form-control" 
+                               value="{% if historia %}{{ historia.fecha_elaboracion|date:'Y-m-d' }}{% endif %}" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos Demográficos -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Edad</label>
+                        <input type="number" name="edad" class="form-control" 
+                               value="{{ historia.edad|default:'' }}" min="0" max="150">
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label class="form-label">Ocupación</label>
+                        <input type="text" name="ocupacion" class="form-control" 
+                               value="{{ historia.ocupacion|default:'' }}" maxlength="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Estado Civil</label>
+                        <select name="estado_civil" class="form-select">
+                            <option value="">Seleccione...</option>
+                            <option value="SOLTERO" {% if historia.estado_civil == 'SOLTERO' %}selected{% endif %}>Soltero</option>
+                            <option value="CASADO" {% if historia.estado_civil == 'CASADO' %}selected{% endif %}>Casado</option>
+                            <option value="DIVORCIADO" {% if historia.estado_civil == 'DIVORCIADO' %}selected{% endif %}>Divorciado</option>
+                            <option value="VIUDO" {% if historia.estado_civil == 'VIUDO' %}selected{% endif %}>Viudo</option>
+                            <option value="UNION_LIBRE" {% if historia.estado_civil == 'UNION_LIBRE' %}selected{% endif %}>Unión Libre</option>
+                            <option value="OTRO" {% if historia.estado_civil == 'OTRO' %}selected{% endif %}>Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Grupo Sanguíneo</label>
+                        <select name="grupo_sanguineo" class="form-select">
+                            <option value="DESCONOCIDO">Desconocido</option>
+                            <option value="A+" {% if historia.grupo_sanguineo == 'A+' %}selected{% endif %}>A+</option>
+                            <option value="A-" {% if historia.grupo_sanguineo == 'A-' %}selected{% endif %}>A-</option>
+                            <option value="B+" {% if historia.grupo_sanguineo == 'B+' %}selected{% endif %}>B+</option>
+                            <option value="B-" {% if historia.grupo_sanguineo == 'B-' %}selected{% endif %}>B-</option>
+                            <option value="AB+" {% if historia.grupo_sanguineo == 'AB+' %}selected{% endif %}>AB+</option>
+                            <option value="AB-" {% if historia.grupo_sanguineo == 'AB-' %}selected{% endif %}>AB-</option>
+                            <option value="O+" {% if historia.grupo_sanguineo == 'O+' %}selected{% endif %}>O+</option>
+                            <option value="O-" {% if historia.grupo_sanguineo == 'O-' %}selected{% endif %}>O-</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Lugar de Nacimiento</label>
+                <input type="text" name="lugar_nacimiento" class="form-control" 
+                       value="{{ historia.lugar_nacimiento|default:'' }}" maxlength="120">
+            </div>
+        </div>
+
+        <!-- Columna Derecha - Antecedentes y Hábitos -->
+        <div class="col-md-6">
+            <h6 class="border-bottom pb-2 mb-3">Hábitos y Antecedentes</h6>
+            
+            <!-- Hábitos -->
+            <div class="mb-3">
+                <label class="form-label">Alimentación</label>
+                <textarea name="alimentacion" class="form-control" rows="2" 
+                          placeholder="Describa los hábitos alimenticios...">{{ historia.alimentacion|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Higiene</label>
+                <textarea name="higiene" class="form-control" rows="2" 
+                          placeholder="Describa los hábitos de higiene...">{{ historia.higiene|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Inmunizaciones</label>
+                <textarea name="inmunizaciones" class="form-control" rows="2" 
+                          placeholder="Esquema de vacunación...">{{ historia.inmunizaciones|default:'' }}</textarea>
+            </div>
+
+            <!-- Antecedentes -->
+            <div class="mb-3">
+                <label class="form-label">Antecedentes Quirúrgicos</label>
+                <textarea name="quirurgicos" class="form-control" rows="2" 
+                          placeholder="Cirugías previas...">{{ historia.quirurgicos|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Antecedentes Traumáticos</label>
+                <textarea name="traumaticos" class="form-control" rows="2" 
+                          placeholder="Traumatismos, accidentes...">{{ historia.traumaticos|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Antecedentes Transfusionales</label>
+                <textarea name="transfusionales" class="form-control" rows="2" 
+                          placeholder="Historial de transfusiones...">{{ historia.transfusionales|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Antecedentes Alérgicos</label>
+                <textarea name="alergicos" class="form-control" rows="2" 
+                          placeholder="Alergias a medicamentos, alimentos...">{{ historia.alergicos|default:'' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observaciones -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <h6 class="border-bottom pb-2 mb-3">Observaciones Generales</h6>
+            <div class="mb-3">
+                <textarea name="observaciones" class="form-control" rows="4" 
+                          placeholder="Observaciones adicionales...">{{ historia.observaciones|default:'' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="border-top pt-3">
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i> Cancelar
+            </button>
+            <button type="button" class="btn btn-primary btn-guardar" onclick="guardarHistoria()">
+                <i class="fas fa-save me-1"></i> Guardar Historia
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Modal para buscar pacientes -->
+<div class="modal fade" id="modalBuscarPacientes" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-search me-2"></i>Buscar Paciente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="buscarPacienteInput" 
+                           placeholder="Buscar por nombre o cédula...">
+                    <button class="btn btn-outline-primary" type="button" onclick="cargarPacientes()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Cédula</th>
+                                <th>Teléfono</th>
+                                <th width="100">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaPacientes">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <i class="fas fa-search me-2"></i>
+                                    Ingrese un término de búsqueda
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Inicializar cuando el formulario se carga
+$(document).ready(function() {
+    console.log('Formulario de historia clínica cargado');
+    
+    // Enfocar el primer campo
+    setTimeout(() => {
+        const primerCampo = document.querySelector('#formHistoria input:not([readonly]), #formHistoria select, #formHistoria textarea');
+        if (primerCampo) primerCampo.focus();
+    }, 100);
+    
+    // Generar expediente automáticamente si es nuevo
+    {% if not historia %}
+        generarExpediente();
+        // Establecer fecha actual
+        const hoy = new Date().toISOString().split('T')[0];
+        document.querySelector('input[name="fecha_elaboracion"]').value = hoy;
+    {% endif %}
+});
+
+// Función para buscar pacientes
+function buscarPaciente() {
+    const modal = new bootstrap.Modal(document.getElementById('modalBuscarPacientes'));
+    modal.show();
+    
+    // Limpiar búsqueda anterior
+    document.getElementById('buscarPacienteInput').value = '';
+    document.getElementById('listaPacientes').innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center text-muted">
+                <i class="fas fa-search me-2"></i>
+                Ingrese un término de búsqueda
+            </td>
+        </tr>
+    `;
+    
+    // Enfocar el campo de búsqueda
+    setTimeout(() => {
+        document.getElementById('buscarPacienteInput').focus();
+    }, 500);
+}
+
+// CORREGIDO: Usar la URL correcta para buscar pacientes
+function cargarPacientes() {
+    const query = document.getElementById('buscarPacienteInput').value;
+    const tbody = document.getElementById('listaPacientes');
+    
+    // Mostrar loading
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                Buscando pacientes...
+            </td>
+        </tr>
+    `;
+    
+    // Construir URL con el tag de Django
+    const url = '{% url "ajax_pacientes" %}?q=' + encodeURIComponent(query);
+    console.log('Buscando pacientes en:', url);
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Pacientes encontrados:', data);
+            tbody.innerHTML = '';
+            
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(paciente => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.innerHTML = `
+                        <td>${paciente.nombre_completo}</td>
+                        <td>${paciente.cedula}</td>
+                        <td>${paciente.telefono}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary w-100" 
+                                    onclick="seleccionarPaciente(${paciente.id}, '${paciente.nombre_completo}', '${paciente.cedula}')">
+                                <i class="fas fa-check me-1"></i> Seleccionar
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            <i class="fas fa-user-slash me-2"></i>
+                            No se encontraron pacientes con ese criterio
+                        </td>
+                    </tr>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar pacientes:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar pacientes: ${error.message}
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+// Permitir buscar con Enter en el modal de pacientes
+document.addEventListener('DOMContentLoaded', function() {
+    const inputBuscarPaciente = document.getElementById('buscarPacienteInput');
+    if (inputBuscarPaciente) {
+        inputBuscarPaciente.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                cargarPacientes();
+            }
+        });
+    }
+});
+
+// Permitir guardar con Enter (excepto en textareas)
+document.getElementById('formHistoria').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        guardarHistoria();
+    }
+});
+</script>

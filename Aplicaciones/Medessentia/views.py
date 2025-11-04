@@ -924,9 +924,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .models import (
-    Cie10, HistoriaClinica, HistoriaCie10, Cita, ArchivoCita, EncuestaCita,
-    Atencion, AtencionCie10, RevisionSistemas, ExamenFisico,
-    Notificacion, HorarioDoctor, ArchivoAtencion
+    Cie10
 )
 
 # ---------------- Utilidades JSON ----------------
@@ -944,1169 +942,487 @@ def require(method, request):
 
 
 
-# ========== 1) CIE-10 ==========
-@login_required
-def cie10_index(request):
-    return render(request, "cie10/index.html")
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.db import transaction
+from django.db.models import Q
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from django.middleware.csrf import get_token
+import json
+from .models import Cie10
 
 @login_required
-def cie10_listar(request):
-    q = (request.GET.get("q") or "").strip()
-    qs = Cie10.objects.all()
-    if q:
-        qs = qs.filter(codigo__icontains=q) | qs.filter(descripcion__icontains=q)
-    data = [{"id_cie10":x.id_cie10, "codigo":x.codigo, "descripcion":x.descripcion} for x in qs.order_by("codigo")[:1000]]
-    return ok({"rows": data})
+def cie10_inicio(request):
+    return render(request, "cie10/inicio.html")
+
+@login_required
+def cie10_listado(request):
+    try:
+        q = request.GET.get("q", "").strip()
+        
+        queryset = Cie10.objects.all()
+        
+        if q:
+            queryset = queryset.filter(
+                Q(codigo__icontains=q) | 
+                Q(descripcion__icontains=q)
+            )
+        
+        data = []
+        for item in queryset.order_by('codigo'):
+            data.append({
+                "id_cie10": item.id_cie10,
+                "codigo": item.codigo,
+                "descripcion": item.descripcion
+            })
+        
+        return JsonResponse({"data": data})
+    
+    except Exception as e:
+        return JsonResponse({"data": [], "error": str(e)})
 
 @login_required
 def cie10_formulario(request):
-    _id = request.GET.get("id")
-    item = Cie10.objects.filter(pk=_id).first() if _id else None
-    return render(request, "cie10/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def cie10_guardar(request):
-    if (err := require("POST", request)): return err
-    codigo = (request.POST.get("codigo") or "").strip()
-    descripcion = (request.POST.get("descripcion") or "").strip()
-    if not codigo or not descripcion: return bad("Código y descripción son obligatorios")
-    _id = request.POST.get("id_cie10")
     try:
-        with transaction.atomic():
-            if _id:
-                obj = Cie10.objects.select_for_update().get(pk=_id)
-                obj.codigo, obj.descripcion = codigo, descripcion
-                obj.save(update_fields=["codigo","descripcion"])
-            else:
-                obj = Cie10.objects.create(codigo=codigo, descripcion=descripcion)
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok({"id": obj.id_cie10}, "Guardado")
-
-@login_required
-@csrf_exempt
-def cie10_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    if not _id: return bad("Falta id")
-    try:
-        Cie10.objects.filter(pk=_id).delete()
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 2) Historia Clínica ==========
-@login_required
-def historia_index(request):
-    return render(request, "historia/index.html")
-
-@login_required
-def historia_listar(request):
-    q = (request.GET.get("q") or "").strip()
-    qs = HistoriaClinica.objects.all()
-    if q:
-        qs = qs.filter(expediente_no__icontains=q)
-    data = [{
-        "id_historia": x.id_historia,
-        "id_paciente": x.paciente_id,
-        "id_doctor": x.doctor_id,
-        "fecha_elaboracion": x.fecha_elaboracion.strftime("%Y-%m-%d"),
-        "expediente_no": x.expediente_no,
-        "edad": x.edad,
-        "grupo_sanguineo": x.grupo_sanguineo,
-    } for x in qs.order_by("-fecha_elaboracion")[:500]]
-    return ok({"rows": data})
-
-@login_required
-def historia_formulario(request):
-    _id = request.GET.get("id")
-    item = HistoriaClinica.objects.filter(pk=_id).first() if _id else None
-    return render(request, "historia/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def historia_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    campos = ["id_paciente","id_doctor","fecha_elaboracion","expediente_no","edad","ocupacion","estado_civil",
-              "lugar_nacimiento","grupo_sanguineo","alimentacion","higiene","inmunizaciones","quirurgicos",
-              "traumaticos","transfusionales","alergicos","observaciones"]
-    vals = [d.get(k) or None for k in campos]
-    _id = d.get("id_historia")
-    ahora = timezone.now()
-    uid = request.user.id if request.user.is_authenticated else 1
-    try:
-        with connection.cursor() as cur:
-            if _id:
-                sets = ", ".join([f"{k}=%s" for k in campos] + ["actualizado_por=%s","fecha_actualizacion=%s"])
-                cur.execute(f"UPDATE historia_clinica SET {sets} WHERE id_historia=%s",
-                            [*vals, uid, ahora, _id])
-            else:
-                cols = ", ".join(campos + ["creado_por","fecha_creacion"])
-                marks = ", ".join(["%s"]*(len(campos)+2))
-                cur.execute(f"INSERT INTO historia_clinica ({cols}) VALUES ({marks})",
-                            [*vals, uid, ahora])
-                _id = cur.lastrowid
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok({"id": _id}, "Guardado")
-
-@login_required
-@csrf_exempt
-def historia_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    if not _id: return bad("Falta id")
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM historia_clinica WHERE id_historia=%s", [_id])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 3) Historia-CIE10 ==========
-@login_required
-def historia_cie10_index(request):
-    return render(request, "historia_cie10/index.html")
-
-@login_required
-def historia_cie10_listar(request):
-    id_historia = request.GET.get("id_historia")
-    if not id_historia: return ok({"rows":[]})
-    rows = (HistoriaCie10.objects
-            .filter(historia_id=id_historia)
-            .select_related("cie10")
-            .order_by("tipo","cie10__codigo"))
-    data = [{
-        "id_historia": r.historia_id,
-        "id_cie10": r.cie10_id,
-        "codigo": r.cie10.codigo,
-        "descripcion": r.cie10.descripcion,
-        "tipo": r.tipo,
-        "condicion": r.condicion,
-        "cronologia": r.cronologia,
-        "observacion": r.observacion or "",
-    } for r in rows]
-    return ok({"rows": data})
-
-@login_required
-def historia_cie10_formulario(request):
-    return render(request, "historia_cie10/_form.html", {
-        "id_historia": request.GET.get("id_historia"),
-    })
-
-@login_required
-@csrf_exempt
-def historia_cie10_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    try:
-        with connection.cursor() as cur:
-            cur.execute("""REPLACE INTO historia_cie10 (id_historia,id_cie10,tipo,condicion,cronologia,observacion)
-                           VALUES (%s,%s,%s,%s,%s,%s)""",
-                        [d.get("id_historia"), d.get("id_cie10"), d.get("tipo"),
-                         d.get("condicion") or None, d.get("cronologia") or None, d.get("observacion") or None])
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
-
-@login_required
-@csrf_exempt
-def historia_cie10_eliminar(request):
-    if (err := require("POST", request)): return err
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM historia_cie10 WHERE id_historia=%s AND id_cie10=%s",
-                        [request.POST.get("id_historia"), request.POST.get("id_cie10")])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 4) Cita ==========
-from django.http import JsonResponse
-from datetime import datetime, timedelta, time
-from .models import Cita
-
-def horario_disponibilidad(request):
-    doctor_id = request.GET.get('doctor_id')
-    start = request.GET.get('start')
-    end = request.GET.get('end')
-    slot_minutes = int(request.GET.get('slot_minutes', 30))
-
-    start_dt = datetime.fromisoformat(start[:19])  # Ignora zona horaria
-    end_dt = datetime.fromisoformat(end[:19])
-
-    horario_inicio = time(8, 0)
-    horario_fin = time(18, 0)
-
-    citas = Cita.objects.filter(
-        id_doctor=doctor_id,
-        fecha_hora__gte=start_dt,
-        fecha_hora__lt=end_dt
-    )
-
-    eventos = []
-    fecha = start_dt
-    while fecha < end_dt:
-        actual = datetime.combine(fecha.date(), horario_inicio)
-        fin_dia = datetime.combine(fecha.date(), horario_fin)
-        while actual < fin_dia:
-            ocupado = citas.filter(fecha_hora=actual).exists()
-            if not ocupado and actual >= datetime.now():
-                eventos.append({
-                    "title": "Disponible",
-                    "start": actual.isoformat(),
-                    "end": (actual + timedelta(minutes=slot_minutes)).isoformat(),
-                    "tipo": "disponible",
-                    "doctor_id": doctor_id,
-                    "backgroundColor": "#28a745",
-                    "borderColor": "#28a745",
-                    "textColor": "#fff",
-                })
-            actual += timedelta(minutes=slot_minutes)
-        fecha += timedelta(days=1)
-
-    for cita in citas:
-        eventos.append({
-            "title": f"Cita con {cita.id_paciente.get_full_name()}",
-            "start": cita.fecha_hora.isoformat(),
-            "end": (cita.fecha_hora + timedelta(minutes=slot_minutes)).isoformat(),
-            "tipo": "cita",
-            "cita_id": cita.id_cita,
-            "doctor_id": doctor_id,
-            "backgroundColor": "#dc3545",
-            "borderColor": "#dc3545",
-            "textColor": "#fff",
-        })
-
-    return JsonResponse(eventos, safe=False)
-@login_required
-def cita_index(request):
-    # Definir los estados disponibles
-    estados = ['PENDIENTE', 'CONFIRMADA', 'ATENDIDA', 'CANCELADA', 'NO_ASISTE', 'REPROGRAMADA']
-    
-    # Acceder al rol del usuario
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-    is_paciente = request.user.groups.filter(name="Paciente").exists()
-    
-    doctores = User.objects.filter(groups__name='Doctor')
-    return render(request, "cita/index.html", {
-        'estados': estados,
-        'is_admin': is_admin,
-        'is_doctor': is_doctor,
-        'is_paciente': is_paciente,
-        'doctores': doctores,
-        'user_id': request.user.id
-    })
-
-
-@login_required
-def cita_listar(request):
-    estado = (request.GET.get("estado") or "").strip()
-    qs = Cita.objects.all().select_related('id_paciente', 'id_doctor')
-
-    # Restringir visibilidad para pacientes: solo ver sus propias citas
-    is_paciente = request.user.groups.filter(name="Paciente").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    if is_paciente and not (is_doctor or is_admin):
-        qs = qs.filter(id_paciente=request.user)
-    
-    if estado:
-        qs = qs.filter(estado=estado)
-    
-    data = [{
-        "id_cita": x.id_cita,
-        "id_paciente": x.id_paciente.id,
-        "id_doctor": x.id_doctor.id,
-        "fecha_hora": x.fecha_hora.strftime("%Y-%m-%d %H:%M"),
-        "tipo_cita": x.tipo_cita,
-        "estado": x.estado,
-        "motivo": (x.motivo or "")[:120],
-    } for x in qs.order_by("-fecha_hora")[:500]]
-    
-    return JsonResponse({"data": data})
-
-@login_required
-def cita_formulario(request):
-    _id = request.GET.get("id")
-    item = None
-    if _id:
-        try:
-            item = Cita.objects.get(id_cita=_id)
-        except Cita.DoesNotExist:
-            pass
-    
-    # Verificar el rol del usuario
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-    is_paciente = request.user.groups.filter(name="Paciente").exists()
-
-    return render(request, "cita/form.html", {
-        "cita": item,
-        "is_admin": is_admin,
-        "is_doctor": is_doctor,
-        "is_paciente": is_paciente,
-        "user_id": request.user.id
-    })
-
-
-@login_required
-@csrf_exempt
-def cita_guardar(request):
-    if request.method == "POST":
-        try:
-            d = request.POST
-            _id = d.get("id_cita")
-            
-            paciente_id = d.get("id_paciente")
-            doctor_id = d.get("id_doctor")
-            
-            is_paciente = request.user.groups.filter(name="Paciente").exists()
-            if is_paciente:
-                paciente_id = request.user.id
-
-            # Validar que los IDs lleguen correctamente
-            try:
-                paciente_id = int(paciente_id) if paciente_id else None
-                doctor_id = int(doctor_id) if doctor_id else None
-            except (ValueError, TypeError):
-                return JsonResponse({"message": "IDs inválidos"}, status=400)
-            
-            try:
-                paciente = User.objects.get(id=paciente_id)
-                doctor = User.objects.get(id=doctor_id)
-            except User.DoesNotExist:
-                return JsonResponse({"message": "Paciente o doctor no encontrado"}, status=400)
-
-            is_admin = request.user.groups.filter(name="Administrador").exists()
-            is_doctor = request.user.groups.filter(name="Doctor").exists()
-
-            datos = {
-                "id_paciente": paciente,
-                "id_doctor": doctor,
-                "tipo_cita": d.get("tipo_cita"),
-                "motivo": d.get("motivo"),
-                "observaciones": d.get("observaciones") or None,
-                "registrado_por": request.user
-            }
-
-            # Validación de fecha robusta
-            fecha_str = d.get('fecha_hora')
-            if not fecha_str:
-                return JsonResponse({"message": "Fecha y hora es requerida"}, status=400)
-            fecha_dt = parse_datetime(fecha_str)
-            if fecha_dt is None:
-                try:
-                    fecha_dt = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M')
-                    fecha_dt = timezone.make_aware(fecha_dt, timezone.get_default_timezone())
-                except Exception:
-                    return JsonResponse({"message": "Formato de fecha_hora inválido"}, status=400)
-            else:
-                if timezone.is_naive(fecha_dt):
-                    fecha_dt = timezone.make_aware(fecha_dt, timezone.get_default_timezone())
-                else:
-                    fecha_dt = timezone.localtime(fecha_dt, timezone.get_default_timezone())
-            datos["fecha_hora"] = fecha_dt
-
-            slot_minutes = 30
-            slot_end = fecha_dt + timedelta(minutes=slot_minutes)
-
-            # Solapamiento robusto
-            conflicting = Cita.objects.filter(
-                id_doctor=doctor,
-                fecha_hora__lt=slot_end,
-                fecha_hora__gte=fecha_dt - timedelta(minutes=slot_minutes)
-            )
-            if _id:
-                conflicting = conflicting.exclude(id_cita=_id)
-            if conflicting.exists():
-                return JsonResponse({"message": "El horario seleccionado ya está reservado"}, status=400)
-
-            # Estado por defecto si no es admin/doctor
-            if is_admin or is_doctor:
-                datos["estado"] = d.get("estado")
-            else:
-                datos["estado"] = "PENDIENTE"
-
-            if _id:
-                cita = Cita.objects.filter(id_cita=_id).first()
-                if cita:
-                    for key, value in datos.items():
-                        if hasattr(cita, key):
-                            setattr(cita, key, value)
-                    cita.save()
-                else:
-                    return JsonResponse({"message": "Cita no encontrada"}, status=404)
-            else:
-                cita = Cita.objects.create(**datos)
-                _id = cita.id_cita
-            
-            return JsonResponse({"id": _id, "message": "Guardado"})
-        except Exception as e:
-            return JsonResponse({"message": f"No se pudo guardar: {str(e)}"}, status=400)
-    
-    return JsonResponse({"message": "Método no permitido"}, status=405)
-
-@login_required
-@csrf_exempt
-def cita_eliminar(request):
-    if request.method == "POST":
-        _id = request.POST.get("id")
-        try:
-            cita = Cita.objects.filter(id_cita=_id).first()
-            if cita:
-                cita.delete()
-                return JsonResponse({"message": "Eliminado"})
-            else:
-                return JsonResponse({"message": "Cita no encontrada"}, status=404)
-        except Exception as e:
-            return JsonResponse({"message": f"No se pudo eliminar: {str(e)}"}, status=400)
-    return JsonResponse({"message": "Método no permitido"}, status=405)
-# ========== 5) Archivo de cita ==========
-@login_required
-def archivo_cita_index(request):
-    return render(request, "archivo_cita/index.html")
-
-@login_required
-def archivo_cita_listar(request):
-    id_cita = request.GET.get("id_cita")
-    if not id_cita: return ok({"rows":[]})
-    qs = ArchivoCita.objects.filter(cita_id=id_cita).order_by("-fecha_subida")
-    data = [{
-        "id_archivo": a.id_archivo,
-        "id_cita": a.cita_id,
-        "nombre_archivo": a.nombre_archivo,
-        "tipo_archivo": a.tipo_archivo,
-        "fecha_subida": a.fecha_subida.strftime("%Y-%m-%d %H:%M"),
-        "subido_por": a.subido_por_id
-    } for a in qs]
-    return ok({"rows": data})
-
-@login_required
-def archivo_cita_formulario(request):
-    return render(request, "archivo_cita/_form.html", {
-        "id_cita": request.GET.get("id_cita")
-    })
-
-@login_required
-@csrf_exempt
-def archivo_cita_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    try:
-        with connection.cursor() as cur:
-            cur.execute("""INSERT INTO archivo_cita (id_cita,nombre_archivo,tipo_archivo,fecha_subida,subido_por)
-                           VALUES (%s,%s,%s,NOW(),%s)""",
-                        [d.get("id_cita"), d.get("nombre_archivo"), d.get("tipo_archivo"), d.get("subido_por")])
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
-
-@login_required
-@csrf_exempt
-def archivo_cita_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM archivo_cita WHERE id_archivo=%s", [_id])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 6) Encuesta de cita ==========
-@login_required
-def encuesta_cita_index(request):
-    return render(request, "encuesta_cita/index.html")
-
-@login_required
-def encuesta_cita_listar(request):
-    id_cita = request.GET.get("id_cita")
-    qs = EncuestaCita.objects.filter(cita_id=id_cita) if id_cita else EncuestaCita.objects.all()
-    qs = qs.order_by("-fecha_respuesta")[:500]
-    data = [{
-        "id_encuesta": e.id_encuesta,
-        "id_cita": e.cita_id,
-        "calificacion": e.calificacion,
-        "comentarios": (e.comentarios or "")[:120],
-        "fecha_respuesta": e.fecha_respuesta.strftime("%Y-%m-%d %H:%M"),
-    } for e in qs]
-    return ok({"rows": data})
-
-@login_required
-def encuesta_cita_formulario(request):
-    _id = request.GET.get("id")
-    item = EncuestaCita.objects.filter(pk=_id).first() if _id else None
-    return render(request, "encuesta_cita/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def encuesta_cita_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    _id = d.get("id_encuesta")
-    try:
-        with connection.cursor() as cur:
-            if _id:
-                cur.execute("""UPDATE encuesta_cita SET id_cita=%s,calificacion=%s,comentarios=%s WHERE id_encuesta=%s""",
-                            [d.get("id_cita"), d.get("calificacion"), d.get("comentarios") or None, _id])
-            else:
-                cur.execute("""INSERT INTO encuesta_cita (id_cita,calificacion,comentarios,fecha_respuesta)
-                               VALUES (%s,%s,%s,NOW())""",
-                            [d.get("id_cita"), d.get("calificacion"), d.get("comentarios") or None])
-                _id = cur.lastrowid
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok({"id": _id}, "Guardado")
-
-@login_required
-@csrf_exempt
-def encuesta_cita_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM encuesta_cita WHERE id_encuesta=%s", [_id])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 7) Atención ==========
-@login_required
-def atencion_index(request):
-    return render(request, "atencion/index.html")
-
-@login_required
-def atencion_listar(request):
-    id_historia = (request.GET.get("id_historia") or "").strip()
-    qs = Atencion.objects.all()
-    if id_historia:
-        qs = qs.filter(historia_id=id_historia)
-    data = [{
-        "id_atencion": a.id_atencion,
-        "id_historia": a.historia_id,
-        "id_cita": a.cita_id,
-        "id_doctor": a.doctor_id,
-        "fecha": a.fecha.strftime("%Y-%m-%d %H:%M"),
-    } for a in qs.order_by("-fecha")[:500]]
-    return ok({"rows": data})
-
-@login_required
-def atencion_formulario(request):
-    _id = request.GET.get("id")
-    item = Atencion.objects.filter(pk=_id).first() if _id else None
-    return render(request, "atencion/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def atencion_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    campos = ["id_historia","id_cita","id_doctor","fecha","diagnostico","tratamiento"]
-    vals = [d.get(k) or None for k in campos]
-    _id = d.get("id_atencion")
-    try:
-        with connection.cursor() as cur:
-            if _id:
-                cur.execute("""UPDATE atencion SET id_historia=%s,id_cita=%s,id_doctor=%s,fecha=%s,diagnostico=%s,tratamiento=%s
-                               WHERE id_atencion=%s""", [*vals, _id])
-            else:
-                cur.execute("""INSERT INTO atencion (id_historia,id_cita,id_doctor,fecha,diagnostico,tratamiento)
-                               VALUES (%s,%s,%s,%s,%s,%s)""", vals)
-                _id = cur.lastrowid
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok({"id": _id}, "Guardado")
-
-@login_required
-@csrf_exempt
-def atencion_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM atencion WHERE id_atencion=%s", [_id])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 8) Atención-CIE10 ==========
-@login_required
-def atencion_cie10_index(request):
-    return render(request, "atencion_cie10/index.html")
-
-@login_required
-def atencion_cie10_listar(request):
-    id_atencion = request.GET.get("id_atencion")
-    if not id_atencion: return ok({"rows":[]})
-    rows = (AtencionCie10.objects
-            .filter(atencion_id=id_atencion)
-            .select_related("cie10")
-            .order_by("tipo","cie10__codigo"))
-    data = [{
-        "id_atencion": r.atencion_id,
-        "id_cie10": r.cie10_id,
-        "codigo": r.cie10.codigo,
-        "descripcion": r.cie10.descripcion,
-        "tipo": r.tipo,
-        "condicion": r.condicion,
-        "cronologia": r.cronologia,
-        "observacion": r.observacion or "",
-    } for r in rows]
-    return ok({"rows": data})
-
-@login_required
-def atencion_cie10_formulario(request):
-    return render(request, "atencion_cie10/_form.html", {
-        "id_atencion": request.GET.get("id_atencion")
-    })
-
-@login_required
-@csrf_exempt
-def atencion_cie10_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    try:
-        with connection.cursor() as cur:
-            cur.execute("""REPLACE INTO atencion_cie10 (id_atencion,id_cie10,tipo,condicion,cronologia,observacion)
-                           VALUES (%s,%s,%s,%s,%s,%s)""",
-                        [d.get("id_atencion"), d.get("id_cie10"), d.get("tipo"),
-                         d.get("condicion") or None, d.get("cronologia") or None, d.get("observacion") or None])
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
-
-@login_required
-@csrf_exempt
-def atencion_cie10_eliminar(request):
-    if (err := require("POST", request)): return err
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM atencion_cie10 WHERE id_atencion=%s AND id_cie10=%s",
-                        [request.POST.get("id_atencion"), request.POST.get("id_cie10")])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 9) Revisión por sistemas ==========
-@login_required
-def revision_index(request):
-    return render(request, "revision/index.html")
-
-@login_required
-def revision_formulario(request):
-    id_atencion = request.GET.get("id_atencion")
-    item = RevisionSistemas.objects.filter(atencion_id=id_atencion).first()
-    if not item:
-        item = {"id_atencion": id_atencion}
-    return render(request, "revision/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def revision_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    id_atencion = d.get("id_atencion")
-    campos = ["organos_sentidos","respiratorio","cardiovascular","digestivo","genital","urinario",
-              "esqueletico","muscular","nervioso","endocrino","hemo_linfatico","tegumentario"]
-    vals = [d.get(k) or None for k in campos]
-    try:
-        with connection.cursor() as cur:
-            sets = ", ".join([f"{k}=%s" for k in campos])
-            cur.execute(
-                f"INSERT INTO revision_sistemas (id_atencion,{','.join(campos)}) "
-                f"VALUES (%s,{','.join(['%s']*len(campos))}) "
-                f"ON DUPLICATE KEY UPDATE {sets}",
-                [id_atencion, *vals, *vals]
-            )
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
-
-
-# ========== 10) Examen físico ==========
-@login_required
-def examen_index(request):
-    return render(request, "examenes/index.html")
-
-@login_required
-def examen_formulario(request):
-    id_atencion = request.GET.get("id_atencion")
-    item = ExamenFisico.objects.filter(atencion_id=id_atencion).first()
-    if not item:
-        item = {"id_atencion": id_atencion}
-    return render(request, "examenes/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def examen_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    id_atencion = d.get("id_atencion")
-    campos = ["frontal","posterior","general","neurologico"]
-    vals = [d.get(k) or None for k in campos]
-    try:
-        with connection.cursor() as cur:
-            sets = ", ".join([f"{k}=%s" for k in campos])
-            cur.execute(
-                f"INSERT INTO examen_fisico (id_atencion,{','.join(campos)}) "
-                f"VALUES (%s,{','.join(['%s']*len(campos))}) "
-                f"ON DUPLICATE KEY UPDATE {sets}",
-                [id_atencion, *vals, *vals]
-            )
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
-
-
-# ========== 11) Notificación ==========
-@login_required
-def notificacion_index(request):
-    return render(request, "notificacion/index.html")
-
-@login_required
-def notificacion_listar(request):
-    estado = (request.GET.get("estado") or "").strip()
-    qs = Notificacion.objects.all()
-    if estado:
-        qs = qs.filter(estado=estado)
-    data = [{
-        "id_notificacion": n.id_notificacion,
-        "id_cita": n.cita_id,
-        "id_usuario": n.usuario_id,
-        "medio": n.medio,
-        "estado": n.estado,
-        "fecha_envio": n.fecha_envio.strftime("%Y-%m-%d %H:%M")
-    } for n in qs.order_by("-fecha_envio")[:500]]
-    return ok({"rows": data})
-
-@login_required
-def notificacion_formulario(request):
-    _id = request.GET.get("id")
-    item = Notificacion.objects.filter(pk=_id).first() if _id else None
-    return render(request, "notificacion/_form.html", {"item": item})
-
-@login_required
-@csrf_exempt
-def notificacion_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    _id = d.get("id_notificacion")
-    campos = ["id_cita","id_usuario","medio","mensaje","estado"]
-    vals = [d.get(k) or None for k in campos]
-    try:
-        with connection.cursor() as cur:
-            if _id:
-                cur.execute("""UPDATE notificacion SET id_cita=%s,id_usuario=%s,medio=%s,mensaje=%s,estado=%s
-                               WHERE id_notificacion=%s""", [*vals, _id])
-            else:
-                cur.execute("""INSERT INTO notificacion (id_cita,id_usuario,medio,mensaje,fecha_envio,estado)
-                               VALUES (%s,%s,%s,%s,NOW(),%s)""", vals)
-                _id = cur.lastrowid
-    except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok({"id": _id}, "Guardado")
-
-@login_required
-@csrf_exempt
-def notificacion_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
-    try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM notificacion WHERE id_notificacion=%s", [_id])
-    except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
-
-
-# ========== 12) Horario doctor ==========
-# ========== 5) Horario Doctor ==========
-@login_required
-def horario_index(request):
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-    
-    # Obtener doctores para el filtro
-    doctores = User.objects.filter(groups__name='Doctor')
-    
-    return render(request, "horario/index.html", {
-        'is_admin': is_admin, 
-        'is_doctor': is_doctor,
-        'doctores': doctores
-    })
-
-@login_required
-def horario_listar(request):
-    doctor_id = request.GET.get("doctor_id")
-    qs = HorarioDoctor.objects.all().select_related('id_doctor')
-    
-    if doctor_id:
-        qs = qs.filter(id_doctor_id=doctor_id)
-    
-    data = [{
-        "id_horario": x.id_horario,
-        "id_doctor": x.id_doctor.id,
-        "nombre_doctor": f"{x.id_doctor.first_name} {x.id_doctor.last_name}",
-        "dia_semana": x.dia_semana,
-        "hora_inicio": x.hora_inicio.strftime("%H:%M"),
-        "hora_fin": x.hora_fin.strftime("%H:%M"),
-        "color": get_color_for_doctor(x.id_doctor.id),
-    } for x in qs.order_by("id_doctor", "dia_semana", "hora_inicio")]
-    
-    return JsonResponse({"data": data})
-
-@login_required
-def horario_formulario(request):
-    _id = request.GET.get("id")
-    item = None
-    if _id:
-        try:
-            item = HorarioDoctor.objects.get(id_horario=_id)
-        except HorarioDoctor.DoesNotExist:
-            pass
-    
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-
-    # Si es doctor, solo puede ver sus propios horarios
-    doctores = User.objects.filter(groups__name='Doctor')
-    if is_doctor and not is_admin:
-        doctores = doctores.filter(id=request.user.id)
-
-    return render(request, "horario/form.html", {
-        "horario": item,
-        "doctores": doctores,
-        "is_admin": is_admin,
-        "is_doctor": is_doctor
-    })
-
-@login_required
-@csrf_exempt
-def horario_guardar(request):
-    if request.method == "POST":
-        try:
-            d = request.POST
-            _id = d.get("id_horario")
-            
-            # Si es un nuevo registro, _id vendrá vacío, eso es correcto
-            if _id == '':
-                _id = None
-
-            # Validar que el doctor existe
-            doctor_id = d.get("id_doctor")
-            try:
-                doctor = User.objects.get(id=doctor_id)
-            except User.DoesNotExist:
-                return JsonResponse({"message": "Doctor no encontrado"}, status=400)
-
-            # Validar que hora_inicio < hora_fin
-            hora_inicio = d.get("hora_inicio")
-            hora_fin = d.get("hora_fin")
-            
-            if hora_inicio >= hora_fin:
-                return JsonResponse({"message": "La hora de inicio debe ser menor que la hora de fin"}, status=400)
-
-            # Validar superposición de horarios
-            dia_semana = d.get("dia_semana")
-            horarios_existentes = HorarioDoctor.objects.filter(
-                id_doctor=doctor_id,
-                dia_semana=dia_semana
-            )
-
-            # Si estamos editando, excluir el horario actual
-            if _id:
-                horarios_existentes = horarios_existentes.exclude(id_horario=_id)
-
-            for horario in horarios_existentes:
-                # Convertir a objetos time para comparación
-                from datetime import datetime
-                nuevo_inicio = datetime.strptime(hora_inicio, '%H:%M').time()
-                nuevo_fin = datetime.strptime(hora_fin, '%H:%M').time()
-                
-                if (nuevo_inicio < horario.hora_fin and nuevo_fin > horario.hora_inicio):
-                    return JsonResponse({
-                        "message": f"El horario se superpone con uno existente: {horario.hora_inicio} - {horario.hora_fin}"
-                    }, status=400)
-
-            datos = {
-                "id_doctor": doctor,
-                "dia_semana": dia_semana,
-                "hora_inicio": hora_inicio,
-                "hora_fin": hora_fin,
-            }
-
-            if _id:
-                # Editar horario existente
-                horario = HorarioDoctor.objects.filter(id_horario=_id).first()
-                if horario:
-                    for key, value in datos.items():
-                        if hasattr(horario, key):
-                            setattr(horario, key, value)
-                    horario.save()
-                else:
-                    return JsonResponse({"message": "Horario no encontrado"}, status=404)
-            else:
-                # Crear nuevo horario
-                horario = HorarioDoctor.objects.create(**datos)
-                _id = horario.id_horario
-                
-            return JsonResponse({"id": _id, "message": "Guardado"})
-            
-        except Exception as e:
-            return JsonResponse({"message": f"No se pudo guardar: {str(e)}"}, status=400)
-    
-    return JsonResponse({"message": "Método no permitido"}, status=405)
-
-@login_required
-@csrf_exempt
-def horario_eliminar(request):
-    if request.method == "POST":
-        _id = request.POST.get("id")
-        try:
-            horario = HorarioDoctor.objects.filter(id_horario=_id).first()
-            if horario:
-                horario.delete()
-                return JsonResponse({"message": "Eliminado"})
-            else:
-                return JsonResponse({"message": "Horario no encontrado"}, status=404)
-        except Exception as e:
-            return JsonResponse({"message": f"No se pudo eliminar: {str(e)}"}, status=400)
-    return JsonResponse({"message": "Método no permitido"}, status=405)
-
-@login_required
-def horario_calendario(request):
-    """Vista para el calendario semanal con FullCalendar"""
-    is_admin = request.user.groups.filter(name="Administrador").exists()
-    is_doctor = request.user.groups.filter(name="Doctor").exists()
-    
-    # Obtener doctores para el filtro
-    doctores = User.objects.filter(groups__name='Doctor')
-    
-    is_paciente = request.user.groups.filter(name="Paciente").exists()
-    return render(request, "horario/calendario.html", {
-        'is_admin': is_admin,
-        'is_doctor': is_doctor,
-        'is_paciente': is_paciente,
-        'user_id': request.user.id,
-        'doctores': doctores
-    })
-
-@login_required
-def horario_eventos(request):
-    """Endpoint para obtener horarios en formato FullCalendar"""
-    doctor_id = request.GET.get("doctor_id")
-    qs = HorarioDoctor.objects.all().select_related('id_doctor')
-    
-    if doctor_id:
-        qs = qs.filter(id_doctor_id=doctor_id)
-    
-    eventos = []
-    
-    for horario in qs:
-        color = get_color_for_doctor(horario.id_doctor.id)
+        item_id = request.GET.get("id")
+        item = None
         
-        # Convertir a eventos semanales para FullCalendar
-        evento = {
-            'id': f"horario_{horario.id_horario}",
-            'title': f"Dr. {horario.id_doctor.first_name} {horario.id_doctor.last_name}",
-            'daysOfWeek': [get_day_number(horario.dia_semana)],
-            'startTime': horario.hora_inicio.strftime("%H:%M:%S"),
-            'endTime': horario.hora_fin.strftime("%H:%M:%S"),
-            'color': color,
-            'extendedProps': {
-                'id_horario': horario.id_horario,
-                'doctor': f"{horario.id_doctor.first_name} {horario.id_doctor.last_name}",
-                'dia_semana': horario.dia_semana,
-                'tipo': 'horario'
-            }
-        }
-        eventos.append(evento)
+        if item_id:
+            try:
+                item = Cie10.objects.get(id_cie10=item_id)
+            except Cie10.DoesNotExist:
+                return JsonResponse({"error": "No encontrado"}, status=404)
+        
+        # Pasar el request para que el CSRF token funcione
+        form_html = render_to_string("cie10/formulario.html", {"item": item}, request=request)
+        return JsonResponse({"form_html": form_html})
     
-    return JsonResponse(eventos, safe=False)
-
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @login_required
-def horario_disponibilidad(request):
-    """Devuelve franjas horarias disponibles (eventos individuales) para un doctor
-    Parameters esperados (GET): doctor_id, start, end, slot_minutes (opcional, default 30)
-    Retorna lista de eventos con 'tipo': 'disponible' en extendedProps
-    """
-    from datetime import datetime, timedelta, time
-    from django.utils import timezone
+@require_http_methods(["POST"])
+def cie10_guardar(request):
+    try:
+        # Procesar tanto JSON como FormData
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            codigo = data.get("codigo", "").strip()
+            descripcion = data.get("descripcion", "").strip()
+            id_cie10 = data.get("id_cie10")
+        else:
+            # FormData tradicional
+            codigo = request.POST.get("codigo", "").strip()
+            descripcion = request.POST.get("descripcion", "").strip()
+            id_cie10 = request.POST.get("id_cie10")
+        
+        # Validaciones
+        if not codigo:
+            return JsonResponse({"success": False, "error": "El código es obligatorio"})
+        
+        if not descripcion:
+            return JsonResponse({"success": False, "error": "La descripción es obligatoria"})
+        
+        with transaction.atomic():
+            if id_cie10:
+                # Editar
+                item = Cie10.objects.get(id_cie10=id_cie10)
+                # Verificar si el código ya existe (excluyendo el actual)
+                if Cie10.objects.filter(codigo=codigo).exclude(id_cie10=id_cie10).exists():
+                    return JsonResponse({"success": False, "error": "El código ya existe"})
+                
+                item.codigo = codigo
+                item.descripcion = descripcion
+                item.save()
+                message = "Actualizado correctamente"
+            else:
+                # Crear
+                if Cie10.objects.filter(codigo=codigo).exists():
+                    return JsonResponse({"success": False, "error": "El código ya existe"})
+                
+                item = Cie10.objects.create(codigo=codigo, descripcion=descripcion)
+                message = "Creado correctamente"
+        
+        return JsonResponse({
+            "success": True,
+            "message": message
+        })
+        
+    except Cie10.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Registro no encontrado"})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
 
-    doctor_id = request.GET.get('doctor_id')
-    start = request.GET.get('start')
-    end = request.GET.get('end')
-    slot_minutes = int(request.GET.get('slot_minutes') or 30)
+@login_required
+@require_http_methods(["POST"])
+def cie10_eliminar(request):
+    try:
+        # Procesar tanto JSON como FormData
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            item_id = data.get("id")
+        else:
+            item_id = request.POST.get("id")
+        
+        if not item_id:
+            return JsonResponse({"success": False, "error": "ID requerido"})
+        
+        item = Cie10.objects.get(id_cie10=item_id)
+        item.delete()
+        
+        return JsonResponse({"success": True, "message": "Eliminado correctamente"})
+        
+    except Cie10.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Registro no encontrado"})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
 
-    if not doctor_id or not start or not end:
-        return JsonResponse([], safe=False)
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.models import Q
+from django.template.loader import render_to_string
+from functools import wraps
+import json
+from datetime import datetime
 
-    # usar parse_datetime de Django y normalizar a timezone-aware
-    start_dt = parse_datetime(start)
-    end_dt = parse_datetime(end)
-    if start_dt is None or end_dt is None:
-        return JsonResponse([], safe=False)
+from .models import HistoriaClinica, PerfilUsuario, Cie10
 
-    if timezone.is_naive(start_dt):
-        start_dt = timezone.make_aware(start_dt, timezone.get_default_timezone())
-    else:
-        start_dt = timezone.localtime(start_dt, timezone.get_default_timezone())
+# Decorador de permisos integrado
+def medicos_only(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'No autenticado'}, status=401)
+        if not request.user.groups.filter(name='Doctor').exists():
+            return JsonResponse({'error': 'Solo doctores pueden acceder'}, status=403)
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
-    if timezone.is_naive(end_dt):
-        end_dt = timezone.make_aware(end_dt, timezone.get_default_timezone())
-    else:
-        end_dt = timezone.localtime(end_dt, timezone.get_default_timezone())
+# Vista principal - muestra inicio.html
+@login_required
+def inicio_historiaclinica(request):
+    """Vista principal que muestra inicio.html"""
+    return render(request, 'historia_clinica/inicio.html')
 
-    # obtener horarios del doctor
-    qs = HorarioDoctor.objects.filter(id_doctor_id=doctor_id)
+# AJAX: Listado de historias para la tabla
+@medicos_only
+@require_http_methods(["GET"])
+def listado_historias(request):
+    """Obtener listado de historias para DataTable"""
+    try:
+        search_term = request.GET.get('q', '')
+        
+        # Usar select_related para optimizar las consultas
+        queryset = HistoriaClinica.objects.select_related(
+            'id_paciente', 
+            'id_doctor'
+        ).filter(id_doctor=request.user)
+        
+        if search_term:
+            queryset = queryset.filter(
+                Q(id_paciente__first_name__icontains=search_term) |
+                Q(id_paciente__last_name__icontains=search_term) |
+                Q(expediente_no__icontains=search_term) |
+                Q(id_paciente__perfil__cedula_usuario__icontains=search_term)
+            )
+        
+        data = []
+        for historia in queryset.order_by('-fecha_elaboracion'):
+            try:
+                perfil_paciente = historia.id_paciente.perfil
+                cedula = perfil_paciente.cedula_usuario
+            except (PerfilUsuario.DoesNotExist, AttributeError):
+                cedula = 'No registrada'
+            
+            data.append({
+                'id_historia': historia.id_historia,
+                'expediente_no': historia.expediente_no,
+                'paciente_nombre': f"{historia.id_paciente.first_name} {historia.id_paciente.last_name}",
+                'paciente_cedula': cedula,
+                'doctor_nombre': f"{historia.id_doctor.first_name} {historia.id_doctor.last_name}",
+                'fecha_elaboracion': historia.fecha_elaboracion.strftime('%d/%m/%Y'),
+                'edad': historia.edad or '',
+                'estado_civil': historia.get_estado_civil_display() if historia.estado_civil else '',
+                'puede_editar': True,
+                'puede_eliminar': True,
+            })
+        
+        return JsonResponse({
+            'data': data,
+            'recordsTotal': len(data),
+            'recordsFiltered': len(data)
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error en listado_historias: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
 
-    # obtener citas existentes del doctor en el rango
-    citas_qs = Cita.objects.filter(id_doctor_id=doctor_id, fecha_hora__gte=start_dt, fecha_hora__lt=end_dt)
-    occupied = set()
-    for c in citas_qs:
-        # normalize to minute precision
-        occupied.add(c.fecha_hora.replace(second=0, microsecond=0))
-
-    eventos = []
-    cur = start_dt
-    # iterar día por día para generar slots según horarios
-    while cur.date() <= end_dt.date():
-        weekday = cur.strftime('%A')  # e.g., 'Monday'
-        # map to Spanish week names used in HorarioDoctor
-        mapping = {
-            'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Miercoles',
-            'Thursday': 'Jueves', 'Friday': 'Viernes', 'Saturday': 'Sabado', 'Sunday': 'Domingo'
+# AJAX: Obtener formulario
+@medicos_only
+@require_http_methods(["GET"])
+def obtener_formulario(request):
+    """Obtener formulario.html via AJAX"""
+    try:
+        historia_id = request.GET.get('id')
+        historia = None
+        
+        if historia_id:
+            historia = get_object_or_404(
+                HistoriaClinica.objects.select_related('id_paciente', 'id_doctor'), 
+                id_historia=historia_id, 
+                id_doctor=request.user
+            )
+        
+        context = {
+            'historia': historia,
+            'es_doctor': True,
+            'usuario_actual': request.user,
         }
-        dia_es = mapping.get(weekday)
-
-        if dia_es:
-            horarios_dia = qs.filter(dia_semana=dia_es)
-            for h in horarios_dia:
-                # build day's start/end datetimes (make them timezone-aware)
-                fecha_base = cur.date()
-                start_time_naive = datetime.combine(fecha_base, h.hora_inicio)
-                end_time_naive = datetime.combine(fecha_base, h.hora_fin)
-
-                # Hacer aware con la zona por defecto
-                if timezone.is_naive(start_time_naive):
-                    start_time = timezone.make_aware(start_time_naive, timezone.get_default_timezone())
-                else:
-                    start_time = timezone.localtime(start_time_naive, timezone.get_default_timezone())
-
-                if timezone.is_naive(end_time_naive):
-                    end_time = timezone.make_aware(end_time_naive, timezone.get_default_timezone())
-                else:
-                    end_time = timezone.localtime(end_time_naive, timezone.get_default_timezone())
-
-                slot_start = start_time
-                while slot_start + timedelta(minutes=slot_minutes) <= end_time:
-                    # comparar con start_dt/end_dt (ambos aware)
-                    if slot_start >= start_dt and slot_start < end_dt:
-                        # if not occupied at this exact datetime (normalize seconds)
-                        slot_norm = slot_start.replace(second=0, microsecond=0)
-                        if slot_norm not in occupied:
-                            slot_end = slot_start + timedelta(minutes=slot_minutes)
-                            evento = {
-                                'id': f"disp_{h.id_horario}_{slot_start.isoformat()}",
-                                'title': 'Disponible',
-                                'start': slot_start.isoformat(),
-                                'end': slot_end.isoformat(),
-                                'color': '#2ecc71',
-                                'display': 'block',
-                                'extendedProps': {
-                                    'id_horario': h.id_horario,
-                                    'doctor_id': h.id_doctor.id,
-                                    'tipo': 'disponible'
-                                }
-                            }
-                            eventos.append(evento)
-                    slot_start = slot_start + timedelta(minutes=slot_minutes)
-        cur = cur + timedelta(days=1)
-
-    return JsonResponse(eventos, safe=False)
-
-def get_day_number(dia_semana):
-    """Convertir día de la semana a número (0=Dom, 1=Lun, ..., 6=Sab)"""
-    dias = {
-        'Domingo': 0,
-        'Lunes': 1,
-        'Martes': 2,
-        'Miercoles': 3,
-        'Jueves': 4,
-        'Viernes': 5,
-        'Sabado': 6
-    }
-    return dias.get(dia_semana, 0)
-
-def get_color_for_doctor(doctor_id):
-    """Generar color consistente para cada doctor"""
-    colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e']
-    return colors[doctor_id % len(colors)]
-
-# ========== 13) Archivo de atención ==========
-@login_required
-def archivo_atencion_index(request):
-    return render(request, "archivo_atencion/index.html")
-
-@login_required
-def archivo_atencion_listar(request):
-    id_atencion = request.GET.get("id_atencion")
-    if not id_atencion: return ok({"rows":[]})
-    qs = ArchivoAtencion.objects.filter(atencion_id=id_atencion).order_by("-fecha_subida")
-    data = [{
-        "id_archivo": a.id_archivo,
-        "id_atencion": a.atencion_id,
-        "nombre_archivo": a.nombre_archivo,
-        "ruta_archivo": a.ruta_archivo,
-        "tipo_archivo": a.tipo_archivo,
-        "peso_bytes": a.peso_bytes,
-        "subido_por": a.subido_por_id,
-        "fecha_subida": a.fecha_subida.strftime("%Y-%m-%d %H:%M")
-    } for a in qs]
-    return ok({"rows": data})
-
-@login_required
-def archivo_atencion_formulario(request):
-    return render(request, "archivo_atencion/form.html", {
-        "id_atencion": request.GET.get("id_atencion")
-    })
-
-@login_required
-@csrf_exempt
-def archivo_atencion_guardar(request):
-    if (err := require("POST", request)): return err
-    d = request.POST
-    campos = ["id_atencion","nombre_archivo","ruta_archivo","tipo_archivo","peso_bytes","subido_por"]
-    vals = [d.get(k) or None for k in campos]
-    try:
-        with connection.cursor() as cur:
-            cur.execute("""INSERT INTO archivo_atencion
-                           (id_atencion,nombre_archivo,ruta_archivo,tipo_archivo,peso_bytes,subido_por,fecha_subida)
-                           VALUES (%s,%s,%s,%s,%s,%s,NOW())""", vals)
+        
+        form_html = render_to_string('historia_clinica/formulario.html', context, request=request)
+        
+        return JsonResponse({'form_html': form_html})
+        
     except Exception as e:
-        return bad(f"No se pudo guardar: {e}")
-    return ok(message="Guardado")
+        import traceback
+        print(f"Error en obtener_formulario: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
 
-@login_required
-@csrf_exempt
-def archivo_atencion_eliminar(request):
-    if (err := require("POST", request)): return err
-    _id = request.POST.get("id")
+# AJAX: Guardar historia
+@medicos_only
+@require_http_methods(["POST"])
+def guardar_historia(request):
+    """Guardar historia desde formulario.html"""
     try:
-        with connection.cursor() as cur:
-            cur.execute("DELETE FROM archivo_atencion WHERE id_archivo=%s", [_id])
+        data = json.loads(request.body)
+        historia_id = data.get('id_historia')
+        
+        with transaction.atomic():
+            if historia_id:
+                # Editar
+                historia = get_object_or_404(HistoriaClinica, id_historia=historia_id, id_doctor=request.user)
+            else:
+                # Crear nueva historia
+                historia = HistoriaClinica()
+                historia.id_doctor = request.user
+                historia.creado_por = request.user
+            
+            # Campos obligatorios
+            historia.expediente_no = data.get('expediente_no')
+            historia.fecha_elaboracion = datetime.strptime(data.get('fecha_elaboracion'), '%Y-%m-%d').date()
+            
+            # Asignar paciente - CORRECTO: asignar el objeto User completo
+            paciente_id = data.get('paciente_id')
+            if paciente_id:
+                paciente = get_object_or_404(User, id=paciente_id)
+                historia.id_paciente = paciente
+            
+            # Campos opcionales
+            historia.edad = data.get('edad') or None
+            historia.ocupacion = data.get('ocupacion') or None
+            historia.estado_civil = data.get('estado_civil') or None
+            historia.grupo_sanguineo = data.get('grupo_sanguineo') or 'DESCONOCIDO'
+            historia.lugar_nacimiento = data.get('lugar_nacimiento') or None
+            historia.alimentacion = data.get('alimentacion') or None
+            historia.higiene = data.get('higiene') or None
+            historia.inmunizaciones = data.get('inmunizaciones') or None
+            historia.quirurgicos = data.get('quirurgicos') or None
+            historia.traumaticos = data.get('traumaticos') or None
+            historia.transfusionales = data.get('transfusionales') or None
+            historia.alergicos = data.get('alergicos') or None
+            historia.observaciones = data.get('observaciones') or None
+            
+            if historia_id:
+                historia.actualizado_por = request.user
+                historia.fecha_actualizacion = datetime.now()
+            
+            historia.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Historia clínica guardada exitosamente',
+                'id_historia': historia.id_historia
+            })
+            
     except Exception as e:
-        return bad(f"No se pudo eliminar: {e}")
-    return ok(message="Eliminado")
+        import traceback
+        print(f"Error en guardar_historia: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# AJAX: Detalles de historia
+@medicos_only
+@require_http_methods(["GET"])
+def detalle_historia(request, id):
+    """Obtener detalles para el modal"""
+    try:
+        historia = get_object_or_404(
+            HistoriaClinica.objects.select_related('id_paciente', 'id_doctor', 'creado_por'), 
+            id_historia=id, 
+            id_doctor=request.user
+        )
+        
+        try:
+            perfil_paciente = historia.id_paciente.perfil
+            paciente_telefono = perfil_paciente.telefono_usuario
+            paciente_direccion = perfil_paciente.direccion_usuario
+            paciente_genero = perfil_paciente.genero_usuario
+            paciente_cedula = perfil_paciente.cedula_usuario
+        except (PerfilUsuario.DoesNotExist, AttributeError):
+            paciente_telefono = 'No especificado'
+            paciente_direccion = 'No especificada'
+            paciente_genero = 'No especificado'
+            paciente_cedula = 'No registrada'
+        
+        datos = {
+            'expediente_no': historia.expediente_no,
+            'paciente_nombre': f"{historia.id_paciente.first_name} {historia.id_paciente.last_name}",
+            'paciente_cedula': paciente_cedula,
+            'paciente_telefono': paciente_telefono,
+            'paciente_direccion': paciente_direccion,
+            'paciente_genero': paciente_genero,
+            'doctor_nombre': f"{historia.id_doctor.first_name} {historia.id_doctor.last_name}",
+            'fecha_elaboracion': historia.fecha_elaboracion.strftime('%d/%m/%Y'),
+            'edad': historia.edad or 'No especificada',
+            'estado_civil': historia.get_estado_civil_display() if historia.estado_civil else 'No especificado',
+            'grupo_sanguineo': historia.get_grupo_sanguineo_display() if historia.grupo_sanguineo else 'No especificado',
+            'ocupacion': historia.ocupacion or 'No especificada',
+            'lugar_nacimiento': historia.lugar_nacimiento or 'No especificado',
+            'alimentacion': historia.alimentacion or 'No especificada',
+            'higiene': historia.higiene or 'No especificada',
+            'inmunizaciones': historia.inmunizaciones or 'No especificadas',
+            'quirurgicos': historia.quirurgicos or 'No especificados',
+            'traumaticos': historia.traumaticos or 'No especificados',
+            'transfusionales': historia.transfusionales or 'No especificados',
+            'alergicos': historia.alergicos or 'No especificados',
+            'observaciones': historia.observaciones or 'No hay observaciones',
+            'creado_por': f"{historia.creado_por.first_name} {historia.creado_por.last_name}",
+            'fecha_creacion': historia.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+        }
+        
+        if historia.actualizado_por:
+            datos['actualizado_por'] = f"{historia.actualizado_por.first_name} {historia.actualizado_por.last_name}"
+            datos['fecha_actualizacion'] = historia.fecha_actualizacion.strftime('%d/%m/%Y %H:%M')
+        
+        return JsonResponse({'data': datos})
+        
+    except Exception as e:
+        import traceback
+        print(f"Error en detalle_historia: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
+# AJAX: Eliminar historia
+@medicos_only
+@require_http_methods(["POST"])
+def eliminar_historia(request):
+    """Eliminar historia"""
+    try:
+        data = json.loads(request.body)
+        historia_id = data.get('id')
+        
+        historia = get_object_or_404(HistoriaClinica, id_historia=historia_id, id_doctor=request.user)
+        historia.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Historia clínica eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error en eliminar_historia: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# AJAX: Buscar pacientes
+@medicos_only
+@require_http_methods(["GET"])
+def buscar_pacientes(request):
+    """Buscar pacientes para el formulario"""
+    try:
+        query = request.GET.get('q', '')
+        
+        pacientes = PerfilUsuario.objects.select_related('user').all()
+        
+        if query:
+            pacientes = pacientes.filter(
+                Q(user__first_name__icontains=query) |
+                Q(user__last_name__icontains=query) |
+                Q(cedula_usuario__icontains=query)
+            )
+        
+        data = []
+        for perfil in pacientes[:20]:
+            data.append({
+                'id': perfil.user.id,
+                'nombre_completo': f"{perfil.user.first_name} {perfil.user.last_name}",
+                'cedula': perfil.cedula_usuario,
+                'telefono': perfil.telefono_usuario or 'No especificado'
+            })
+        
+        return JsonResponse({'data': data})
+        
+    except Exception as e:
+        import traceback
+        print(f"Error en buscar_pacientes: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
+# AJAX: Generar expediente
+@medicos_only
+@require_http_methods(["GET"])
+def generar_expediente(request):
+    """Generar número de expediente automático"""
+    try:
+        fecha_actual = datetime.now().strftime('%Y%m%d')
+        count_hoy = HistoriaClinica.objects.filter(
+            fecha_creacion__date=datetime.now().date()
+        ).count()
+        
+        numero = str(count_hoy + 1).zfill(3)
+        expediente = f"HC-{fecha_actual}-{numero}"
+        
+        return JsonResponse({'expediente': expediente})
+        
+    except Exception as e:
+        import traceback
+        print(f"Error en generar_expediente: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
+# AJAX: Buscar CIE-10
+@medicos_only
+@require_http_methods(["GET"])
+def buscar_cie10(request):
+    """Buscar códigos CIE-10"""
+    try:
+        query = request.GET.get('q', '')
+        
+        if len(query) < 2:
+            return JsonResponse({'resultados': []})
+        
+        resultados = Cie10.objects.filter(
+            Q(codigo__icontains=query) | Q(descripcion__icontains=query)
+        )[:10]
+        
+        data = [{
+            'codigo': item.codigo,
+            'descripcion': item.descripcion
+        } for item in resultados]
+        
+        return JsonResponse({'resultados': data})
+    except Exception as e:
+        import traceback
+        print(f"Error en buscar_cie10: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)

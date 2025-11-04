@@ -1,0 +1,530 @@
+{% extends "dashboards/base_dashboard.html" %}
+{% load static %}
+{% block title %}Historia Clinica{% endblock %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Historia Clínica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .table-actions {
+            white-space: nowrap;
+        }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .paciente-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-medical me-2"></i>Historias Clínicas</h4>
+                    <button class="btn btn-light btn-sm" onclick="abrirFormulario()">
+                        <i class="fas fa-plus me-1"></i> Nueva Historia
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Barra de búsqueda -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="inputBuscar" placeholder="Buscar por expediente, paciente o doctor...">
+                            <button class="btn btn-outline-primary" type="button" onclick="buscar()">
+                                <i class="fas fa-search me-1"></i> Buscar
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusqueda()">
+                                <i class="fas fa-times me-1"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <small class="text-muted" id="contadorRegistros"></small>
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="table-responsive">
+                    <table id="tablaHistorias" class="table table-striped table-bordered" style="width:100%">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="120">Expediente</th>
+                                <th width="200">Paciente</th>
+                                <th width="120">Cédula</th>
+                                <th width="150">Doctor</th>
+                                <th width="100">Fecha</th>
+                                <th width="80">Edad</th>
+                                <th width="120">Estado Civil</th>
+                                <th width="100" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se cargan via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para formulario -->
+    <div class="modal fade" id="modalFormulario" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalTitulo">
+                        <i class="fas fa-edit me-2"></i>Historia Clínica - Nuevo Registro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalContenido">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary"></div>
+                        <p class="mt-2">Cargando formulario...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles -->
+    <div class="modal fade" id="modalDetalle" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye me-2"></i>Detalle de Historia Clínica
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalDetalleContenido">
+                    Cargando detalles...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+    let tabla = null;
+    let modalFormulario = null;
+    let modalDetalle = null;
+
+    // Inicializar cuando el documento esté listo
+    $(document).ready(function() {
+        console.log("Iniciando módulo Historias Clínicas...");
+        
+        // Inicializar modales
+        modalFormulario = new bootstrap.Modal(document.getElementById('modalFormulario'));
+        modalDetalle = new bootstrap.Modal(document.getElementById('modalDetalle'));
+        
+        // Inicializar tabla
+        inicializarTabla();
+        
+        // Cargar datos iniciales
+        cargarDatos();
+
+        // Buscar con Enter
+        $('#inputBuscar').on('keypress', function(e) {
+            if (e.which === 13) {
+                buscar();
+            }
+        });
+    });
+
+    function inicializarTabla() {
+        tabla = $('#tablaHistorias').DataTable({
+            data: [],
+            columns: [
+                { data: 'expediente_no' },
+                { data: 'paciente_nombre' },
+                { data: 'paciente_cedula' },
+                { data: 'doctor_nombre' },
+                { data: 'fecha_elaboracion' },
+                { data: 'edad' },
+                { data: 'estado_civil' },
+                {
+                    data: null,
+                    className: 'table-actions text-center',
+                    render: function(data, type, row) {
+                        let botones = `
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info btn-action" onclick="verDetalle(${row.id_historia})" title="Ver Detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>`;
+                        
+                        if (row.puede_editar) {
+                            botones += `
+                                <button class="btn btn-outline-primary btn-action" onclick="abrirFormulario(${row.id_historia})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>`;
+                        }
+                        
+                        if (row.puede_eliminar) {
+                            botones += `
+                                <button class="btn btn-outline-danger btn-action" onclick="eliminarHistoria(${row.id_historia})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>`;
+                        }
+                        
+                        botones += `</div>`;
+                        return botones;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            },
+            pageLength: 10,
+            order: [[4, 'desc']], // Ordenar por fecha más reciente
+            drawCallback: function(settings) {
+                // Actualizar contador de registros
+                const data = settings.json;
+                if (data && data.recordsTotal !== undefined) {
+                    $('#contadorRegistros').text(`Mostrando ${data.recordsFiltered} de ${data.recordsTotal} registros`);
+                }
+            }
+        });
+    }
+
+    function cargarDatos() {
+        $.ajax({
+            url: '{% url "ajax_listado" %}',
+            type: 'GET',
+            data: {
+                q: $('#inputBuscar').val()
+            },
+            success: function(response) {
+                if (response.data) {
+                    tabla.clear().rows.add(response.data).draw();
+                }
+            },
+            error: function(xhr) {
+                console.error('Error al cargar datos:', xhr);
+                mostrarAlerta('Error al cargar los datos: ' + xhr.responseText, 'error');
+            }
+        });
+    }
+
+    function buscar() {
+        cargarDatos();
+    }
+
+    function limpiarBusqueda() {
+        $('#inputBuscar').val('');
+        cargarDatos();
+    }
+
+    function abrirFormulario(id = null) {
+        const url = '{% url "ajax_formulario" %}?id=' + (id || '');
+        
+        const titulo = id ? 'Editar Historia Clínica' : 'Nueva Historia Clínica';
+        $('#modalTitulo').html('<i class="fas fa-edit me-2"></i>' + titulo);
+        
+        // Mostrar modal inmediatamente
+        modalFormulario.show();
+        
+        // Cargar formulario
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(response) {
+                if (response.form_html) {
+                    $('#modalContenido').html(response.form_html);
+                } else {
+                    $('#modalContenido').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error: No se pudo cargar el formulario
+                        </div>
+                    `);
+                }
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr);
+                $('#modalContenido').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar el formulario. Código: ${xhr.status}
+                    </div>
+                `);
+            }
+        });
+    }
+
+    function guardarHistoria() {
+        const form = document.getElementById('formHistoria');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Validar formulario
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Mostrar loading
+        const btnGuardar = document.querySelector('.btn-guardar');
+        const originalHTML = btnGuardar.innerHTML;
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+        
+        // Enviar datos
+        fetch('{% url "ajax_guardar" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': data.csrfmiddlewaretoken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                modalFormulario.hide();
+                cargarDatos();
+                mostrarAlerta(result.message, 'success');
+            } else {
+                mostrarAlerta(result.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error de conexión: ' + error.message, 'error');
+        })
+        .finally(() => {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = originalHTML;
+        });
+    }
+
+    function verDetalle(id) {
+        $('#modalDetalleContenido').html(`
+            <div class="text-center py-4">
+                <div class="spinner-border text-info"></div>
+                <p class="mt-2">Cargando detalles...</p>
+            </div>
+        `);
+        
+        modalDetalle.show();
+        
+        $.ajax({
+            url: '{% url "ajax_detalle" 0 %}'.replace('0', id),
+            type: 'GET',
+            success: function(response) {
+                if (response.data) {
+                    mostrarDetalles(response.data);
+                } else {
+                    $('#modalDetalleContenido').html(`
+                        <div class="alert alert-danger">
+                            Error al cargar los detalles
+                        </div>
+                    `);
+                }
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr);
+                $('#modalDetalleContenido').html(`
+                    <div class="alert alert-danger">
+                        Error al cargar los detalles. Código: ${xhr.status}
+                    </div>
+                `);
+            }
+        });
+    }
+
+    function mostrarDetalles(datos) {
+        let html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2">Datos del Paciente</h6>
+                    <p><strong>Nombre:</strong> ${datos.paciente_nombre}</p>
+                    <p><strong>Cédula:</strong> ${datos.paciente_cedula}</p>
+                    <p><strong>Teléfono:</strong> ${datos.paciente_telefono}</p>
+                    <p><strong>Dirección:</strong> ${datos.paciente_direccion}</p>
+                    <p><strong>Género:</strong> ${datos.paciente_genero}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2">Datos de la Historia</h6>
+                    <p><strong>Expediente:</strong> ${datos.expediente_no}</p>
+                    <p><strong>Doctor:</strong> ${datos.doctor_nombre}</p>
+                    <p><strong>Fecha Elaboración:</strong> ${datos.fecha_elaboracion}</p>
+                    <p><strong>Edad:</strong> ${datos.edad || 'No especificada'}</p>
+                    <p><strong>Estado Civil:</strong> ${datos.estado_civil}</p>
+                    <p><strong>Grupo Sanguíneo:</strong> ${datos.grupo_sanguineo}</p>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">Antecedentes y Hábitos</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Ocupación:</strong> ${datos.ocupacion || 'No especificada'}</p>
+                            <p><strong>Lugar Nacimiento:</strong> ${datos.lugar_nacimiento || 'No especificado'}</p>
+                            <p><strong>Alimentación:</strong> ${datos.alimentacion || 'No especificada'}</p>
+                            <p><strong>Higiene:</strong> ${datos.higiene || 'No especificada'}</p>
+                            <p><strong>Inmunizaciones:</strong> ${datos.inmunizaciones || 'No especificadas'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Quirúrgicos:</strong> ${datos.quirurgicos || 'No especificados'}</p>
+                            <p><strong>Traumáticos:</strong> ${datos.traumaticos || 'No especificados'}</p>
+                            <p><strong>Transfusionales:</strong> ${datos.transfusionales || 'No especificados'}</p>
+                            <p><strong>Alérgicos:</strong> ${datos.alergicos || 'No especificados'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">Observaciones</h6>
+                    <p>${datos.observaciones || 'No hay observaciones'}</p>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <small class="text-muted">
+                        <strong>Creado por:</strong> ${datos.creado_por} 
+                        <strong>el:</strong> ${datos.fecha_creacion}
+                    </small>
+                </div>
+            </div>
+        `;
+        
+        $('#modalDetalleContenido').html(html);
+    }
+
+    function eliminarHistoria(id) {
+        if (!confirm('¿Está seguro de que desea eliminar esta historia clínica?\nEsta acción no se puede deshacer.')) {
+            return;
+        }
+        
+        fetch('{% url "ajax_eliminar" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({id: id})
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                cargarDatos();
+                mostrarAlerta(result.message, 'success');
+            } else {
+                mostrarAlerta(result.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error de conexión: ' + error.message, 'error');
+        });
+    }
+
+    function mostrarAlerta(mensaje, tipo = 'info') {
+        // Crear alerta Bootstrap
+        const alerta = document.createElement('div');
+        alerta.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} alert-dismissible fade show`;
+        alerta.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insertar al inicio del card-body
+        const cardBody = document.querySelector('.card-body');
+        cardBody.insertBefore(alerta, cardBody.firstChild);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (alerta.parentNode) {
+                alerta.remove();
+            }
+        }, 5000);
+    }
+
+    // Función para seleccionar paciente (se usará en el formulario)
+    function seleccionarPaciente(pacienteId, pacienteNombre, pacienteCedula) {
+        document.getElementById('paciente_id').value = pacienteId;
+        document.getElementById('paciente_nombre').value = pacienteNombre;
+        document.getElementById('paciente_cedula').value = pacienteCedula;
+        
+        // Cerrar modal de búsqueda de pacientes si existe
+        const modalPacientes = bootstrap.Modal.getInstance(document.getElementById('modalBuscarPacientes'));
+        if (modalPacientes) {
+            modalPacientes.hide();
+        }
+    }
+
+    // Función para generar expediente automático
+    function generarExpediente() {
+        fetch('{% url "ajax_expediente" %}')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('expediente_no').value = data.expediente;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Función para buscar CIE-10 (se usará en el formulario)
+    function buscarCie10() {
+        const query = document.getElementById('buscarCie10').value;
+        if (query.length < 2) {
+            document.getElementById('resultadosCie10').style.display = 'none';
+            return;
+        }
+
+        fetch('{% url "ajax_cie10" %}?q=' + encodeURIComponent(query))
+            .then(response => response.json())
+            .then(data => {
+                let html = '<div class="list-group">';
+                data.resultados.forEach(item => {
+                    html += `
+                        <a href="#" class="list-group-item list-group-item-action" 
+                           onclick="seleccionarCie10('${item.codigo}', '${item.descripcion}')">
+                            <strong>${item.codigo}</strong> - ${item.descripcion}
+                        </a>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('resultadosCie10').innerHTML = html;
+                document.getElementById('resultadosCie10').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Función para seleccionar CIE-10 (se usará en el formulario)
+    function seleccionarCie10(codigo, descripcion) {
+        const diagnosticoActual = document.getElementById('diagnostico').value;
+        document.getElementById('diagnostico').value = diagnosticoActual + ` [${codigo}] `;
+        document.getElementById('buscarCie10').value = '';
+        document.getElementById('resultadosCie10').style.display = 'none';
+    }
+    </script>
+</body>
+</html>
+{% endblock %}
